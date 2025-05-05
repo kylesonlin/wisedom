@@ -3,8 +3,15 @@ import { Contact } from '../types/contact';
 import { ContactUpdate } from './contactMonitoring';
 
 export interface ActionItem {
+  id: string;
+  type: 'birthday' | 'follow-up' | 'meeting' | 'email' | 'call';
+  title: string;
   description: string;
-  completed: boolean;
+  priority: 'high' | 'medium' | 'low';
+  dueDate: Date;
+  contactId: string;
+  contactName: string;
+  status: 'pending' | 'completed';
 }
 
 export interface TopicAnalysis {
@@ -23,13 +30,14 @@ export interface InteractionAnalysis {
 
 // Canonical FollowUpSuggestion type for the entire app
 export interface FollowUpSuggestion {
-  id: string;
-  contact: Contact;
-  reason: string;
-  type: 'email' | 'call' | 'meeting';
-  suggestedTime: Date;
+  contactId: string;
+  contactName: string;
+  type: 'email' | 'call' | 'meeting' | 'follow-up';
   priority: 'high' | 'medium' | 'low';
-  confidence: number;
+  reason: string;
+  suggestedAction: string;
+  dueDate: Date;
+  suggestedTime?: Date;
 }
 
 export async function analyzeInteraction(interaction: Interaction): Promise<InteractionAnalysis> {

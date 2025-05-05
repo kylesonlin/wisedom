@@ -1,31 +1,59 @@
+import React from 'react';
 import MainLayout from '../../components/MainLayout';
+import AIActionSuggestions from '../../components/widgets/AIActionSuggestions';
+import ActionItems from '../../components/widgets/ActionItems';
+import Birthdays from '../../components/widgets/Birthdays';
+import RelationshipStrength from '../../components/widgets/RelationshipStrength';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-export default function Dashboard() {
+export default async function Dashboard() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <MainLayout>
+        <div className="text-center py-8">
+          <p className="text-gray-500">Please log in to view your dashboard</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="col-span-1">
           {/* AI Action Suggestions Widget */}
           <div className="bg-white rounded-lg shadow p-4 mb-6">
-            <h2 className="text-lg font-semibold mb-2">AI-Predicted Follow-Ups</h2>
-            <div className="text-gray-500">[AIActionSuggestionsWidget placeholder]</div>
+            <AIActionSuggestions userId={user.id} />
           </div>
           {/* Action Items Widget */}
           <div className="bg-white rounded-lg shadow p-4 mb-6">
-            <h2 className="text-lg font-semibold mb-2">Prioritized Action Items</h2>
-            <div className="text-gray-500">[ActionItemsWidget placeholder]</div>
+            <ActionItems userId={user.id} />
           </div>
         </div>
         <div className="col-span-1">
           {/* Birthdays Widget */}
           <div className="bg-white rounded-lg shadow p-4 mb-6">
-            <h2 className="text-lg font-semibold mb-2">Today's Birthdays</h2>
-            <div className="text-gray-500">[BirthdaysWidget placeholder]</div>
+            <Birthdays userId={user.id} />
           </div>
           {/* Relationship Strength Widget */}
           <div className="bg-white rounded-lg shadow p-4 mb-6">
-            <h2 className="text-lg font-semibold mb-2">Relationship Strength Overview</h2>
-            <div className="text-gray-500">[RelationshipStrengthWidget placeholder]</div>
+            <RelationshipStrength userId={user.id} />
           </div>
         </div>
       </div>
