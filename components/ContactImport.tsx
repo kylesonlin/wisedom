@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Contact } from '../types/contact';
+import { Contact, FilterGroupOperation, BatchOperation, ImportOperation } from '../types/contact';
 import { parseFileContent, detectFileFormat } from '../utils/fileFormatHandlers';
 import { BatchProcessingService } from '../services/batchProcessingService';
 import { NormalizationService } from '../services/normalizationService';
@@ -15,6 +15,18 @@ import {
 } from '../utils/errorHandling';
 import { ErrorReportingService } from '../services/errorReporting';
 import { ErrorRecoveryService } from '../services/errorRecovery';
+import {
+  safeEvaluateFunction,
+  safeParseDate,
+  validateEnvVars,
+  safeSupabaseOperation,
+  processBatchWithRetry,
+  cleanupResources,
+  isPotentialDuplicate
+} from '../utils/safetyUtils';
+
+// Validate environment variables on component mount
+validateEnvVars();
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,6 +53,16 @@ type ImportAnalytics = {
   errorCount: number;
   warningCount: number;
 };
+
+interface BatchProcessingResult {
+  similarityGroups: Contact[][];
+  batchStats: {
+    totalBatches: number;
+    processedBatches: number;
+    failedBatches: number;
+    duplicatesPerBatch: Record<number, number>;
+  };
+}
 
 const ContactImport: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -201,26 +223,32 @@ const ContactImport: React.FC = () => {
         });
       });
 
-      const result = await batchProcessor.processContacts(contacts, {
-        batchSize: 1000,
-        maxParallelBatches: 4,
-        similarityThreshold: 0.8,
-        onProgress: (progress, stage) => {
-          setProgress(progress);
-          setCurrentStage(stage as ProcessingStage);
-        },
-        onBatchProcessed: (batch, stage) => {
-          setPreviewContacts(prev => [...prev, ...batch]);
-        },
-        onNormalizationComplete: (normalizedContacts) => {
-          setNormalizationStats(prev => ({
-            ...prev,
-            emailsNormalized: normalizedContacts.filter(c => c.email !== contacts.find(oc => oc.id === c.id)?.email).length,
-            phonesNormalized: normalizedContacts.filter(c => c.phone !== contacts.find(oc => oc.id === c.id)?.phone).length,
-            namesNormalized: normalizedContacts.filter(c => c.name !== contacts.find(oc => oc.id === c.id)?.name).length
-          }));
+      const result = await processBatchWithRetry<Contact, BatchProcessingResult>(
+        contacts,
+        async (batch) => {
+          const processed = await batchProcessor.processContacts(batch, {
+            batchSize: 1000,
+            maxParallelBatches: 4,
+            similarityThreshold: 0.8,
+            onProgress: (progress, stage) => {
+              setProgress(progress);
+              setCurrentStage(stage as ProcessingStage);
+            },
+            onBatchProcessed: (batch, stage) => {
+              setPreviewContacts(prev => [...prev, ...batch]);
+            },
+            onNormalizationComplete: (normalizedContacts) => {
+              setNormalizationStats(prev => ({
+                ...prev,
+                emailsNormalized: normalizedContacts.filter(c => c.email !== contacts.find(oc => oc.id === c.id)?.email).length,
+                phonesNormalized: normalizedContacts.filter(c => c.phone !== contacts.find(oc => oc.id === c.id)?.phone).length,
+                namesNormalized: normalizedContacts.filter(c => c.name !== contacts.find(oc => oc.id === c.id)?.name).length
+              }));
+            }
+          });
+          return processed;
         }
-      });
+      );
 
       setSimilarityGroups(result.similarityGroups);
       setBatchStats(result.batchStats);
@@ -257,8 +285,8 @@ const ContactImport: React.FC = () => {
       // Ensure all existingContacts have createdAt and updatedAt
       const safeExistingContacts = (existingContacts || []).map(c => ({
         ...c,
-        createdAt: c.createdAt || new Date(),
-        updatedAt: c.updatedAt || new Date(),
+        createdAt: safeParseDate(c.createdAt) || new Date(),
+        updatedAt: safeParseDate(c.updatedAt) || new Date(),
       }));
 
       // Prepare contacts for saving with enhanced metadata
@@ -423,7 +451,7 @@ const ContactImport: React.FC = () => {
       setError(createError(ImportErrorType.DATABASE, 'Failed to save contacts', err));
       
       // Enhanced error logging
-      await supabase
+      const { error: logError } = await supabase
         .from('error_logs')
         .insert({
           type: 'contact_import',
@@ -439,6 +467,10 @@ const ContactImport: React.FC = () => {
           },
           createdAt: new Date()
         });
+
+      if (logError) {
+        console.error('Failed to log error:', logError);
+      }
 
       // Update analytics
       setImportAnalytics(prev => ({ ...prev, errorCount: prev.errorCount + 1 }));
@@ -1144,24 +1176,18 @@ const ContactImport: React.FC = () => {
     return merged;
   };
 
-  // Determines if two contacts are potential duplicates based on strict matching criteria:
-  // - Exact email match
-  // - Exact phone match
-  // - Name match (case-insensitive) AND at least one contact method (email/phone) exists for both
-  function isPotentialDuplicate(contactA: Contact, contactB: Contact): boolean {
-    const emailMatch = contactA.email && contactB.email && contactA.email === contactB.email;
-    const phoneMatch = contactA.phone && contactB.phone && contactA.phone === contactB.phone;
-    const nameMatch = !!(contactA.name && contactB.name && contactA.name.trim().toLowerCase() === contactB.name.trim().toLowerCase());
-    // Flag as potential duplicate if:
-    // - Email matches, or
-    // - Phone matches, or
-    // - Name matches AND (email or phone exists for both)
-    return (
-      Boolean(emailMatch) ||
-      Boolean(phoneMatch) ||
-      (Boolean(nameMatch) && Boolean(contactA.email || contactA.phone) && Boolean(contactB.email || contactB.phone))
-    );
-  }
+  // Add cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      cleanupResources({
+        setContacts,
+        setSimilarityGroups,
+        setPreviewContacts,
+        setOperationHistory,
+        setHistoryIndex
+      });
+    };
+  }, []);
 
   return (
     <div className="contact-import">

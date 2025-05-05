@@ -32,4 +32,42 @@ export interface Interaction {
   };
   created_at: string;
   updated_at: string;
-} 
+}
+
+export type FilterGroupOperation = {
+  id: string;
+  filters: Array<{
+    field: keyof Contact;
+    operator: string;
+    value: string;
+    value2?: string;
+    customFunction?: string;
+    isRegex?: boolean;
+    caseSensitive?: boolean;
+    validationPattern?: string;
+    validationMessage?: string;
+  }>;
+  combination: 'AND' | 'OR';
+  parentGroupId?: string;
+  level: number;
+};
+
+export type BatchOperation = {
+  type: 'edit' | 'delete' | 'group';
+  contacts: Contact[];
+  timestamp: number;
+  description: string;
+  preview?: Contact[];
+};
+
+export type ImportOperation = {
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  type: 'import' | 'merge' | 'deduplicate';
+  metadata: {
+    totalContacts: number;
+    processedContacts: number;
+    failedContacts: number;
+    startTime: number;
+    endTime?: number;
+  };
+}; 
