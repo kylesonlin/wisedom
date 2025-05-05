@@ -84,12 +84,16 @@ export class NormalizationService {
 
     const allRules = this.getRules();
     
+    const stringFields: (keyof Contact)[] = [
+      'id', 'name', 'email', 'phone', 'company', 'title', 'birthday', 'assignedTo', 'notes', 'source'
+    ];
+
     allRules.forEach(rule => {
       const originalValue = contact[rule.field];
-      if (typeof originalValue === 'string') {
+      if (typeof originalValue === 'string' && stringFields.includes(rule.field)) {
         const normalizedValue = originalValue.replace(rule.pattern, rule.replacement);
         if (normalizedValue !== originalValue) {
-          normalized[rule.field] = normalizedValue;
+          (normalized as any)[rule.field] = normalizedValue;
           changes.push({
             field: rule.field,
             originalValue,
@@ -172,7 +176,7 @@ export class NormalizationService {
 
     const reverted = { ...contact };
     originalChanges.forEach(change => {
-      reverted[change.field] = change.originalValue as any;
+      (reverted as any)[change.field] = change.originalValue;
     });
 
     return reverted;
