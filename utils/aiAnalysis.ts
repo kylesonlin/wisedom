@@ -12,6 +12,7 @@ export interface ActionItem {
   contactId: string;
   contactName: string;
   status: 'pending' | 'completed';
+  completed: boolean;
 }
 
 export interface TopicAnalysis {
@@ -55,11 +56,27 @@ export async function analyzeInteraction(interaction: Interaction): Promise<Inte
     keyPhrases: ['project deadline', 'next steps', 'collaboration'],
     actionItems: [
       {
+        id: '1',
+        type: 'follow-up',
+        title: 'Follow up on project deadline',
         description: 'Follow up on project deadline',
+        priority: 'high',
+        dueDate: new Date(),
+        contactId: 'contact-1',
+        contactName: 'Contact 1',
+        status: 'pending',
         completed: false
       },
       {
+        id: '2',
+        type: 'meeting',
+        title: 'Schedule next meeting',
         description: 'Schedule next meeting',
+        priority: 'medium',
+        dueDate: new Date(),
+        contactId: 'contact-1',
+        contactName: 'Contact 1',
+        status: 'pending',
         completed: false
       }
     ]
