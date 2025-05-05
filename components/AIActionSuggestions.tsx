@@ -32,7 +32,7 @@ export default function AIActionSuggestions({
     const suggestions: ActionSuggestion[] = [];
 
     // Priority-based suggestions
-    if (priorityScore.overall > 0.8) {
+    if (priorityScore > 0.8) {
       suggestions.push({
         type: 'priority',
         title: 'High Priority Contact',
@@ -43,7 +43,7 @@ export default function AIActionSuggestions({
           'Review recent interactions',
           'Prepare key talking points'
         ]
-      });
+      } as ActionSuggestion);
     }
 
     // Follow-up suggestions
@@ -54,9 +54,8 @@ export default function AIActionSuggestions({
         title: 'Recommended Follow-up',
         description: `Based on interaction history, a follow-up is recommended ${nextFollowUp.reason}.`,
         priority: nextFollowUp.priority,
-        suggestedDate: nextFollowUp.suggestedTime,
-        actionItems: nextFollowUp.actionItems
-      });
+        suggestedDate: nextFollowUp.suggestedTime
+      } as ActionSuggestion);
     }
 
     // Relationship building suggestions
@@ -71,7 +70,7 @@ export default function AIActionSuggestions({
           'Share relevant industry insights',
           'Connect on professional networks'
         ]
-      });
+      } as ActionSuggestion);
     }
 
     // Sentiment-based suggestions
@@ -86,7 +85,7 @@ export default function AIActionSuggestions({
           'Prepare response to address concerns',
           'Schedule a call to discuss issues'
         ]
-      });
+      } as ActionSuggestion);
     }
 
     // Action item reminders
@@ -98,7 +97,7 @@ export default function AIActionSuggestions({
         description: `There are ${pendingActions.length} pending action items that need attention.`,
         priority: 'high',
         actionItems: pendingActions.map(item => item.description)
-      });
+      } as ActionSuggestion);
     }
 
     return suggestions;
