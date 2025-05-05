@@ -4,8 +4,9 @@ module.exports = {
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
+    './utils/**/*.{ts,tsx}',
+    './contexts/**/*.{ts,tsx}',
+    './styles/**/*.{css,scss}',
   ],
   theme: {
     container: {
