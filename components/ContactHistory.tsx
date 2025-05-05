@@ -40,7 +40,19 @@ export default function ContactHistory({ contactId }: ContactHistoryProps) {
         .single();
 
       if (contactError) throw contactError;
-      setContact(contactData);
+      setContact(contactData ? {
+        ...contactData,
+        createdAt: contactData.createdAt ? new Date(contactData.createdAt) : undefined,
+        updatedAt: contactData.updatedAt ? new Date(contactData.updatedAt) : undefined,
+        birthday: contactData.birthday ?? undefined,
+        phone: contactData.phone ?? undefined,
+        company: contactData.company ?? undefined,
+        title: contactData.title ?? undefined,
+        assignedTo: contactData.assignedTo ?? undefined,
+        notes: contactData.notes ?? undefined,
+        source: contactData.source ?? undefined,
+        additionalFields: contactData.additionalFields ?? undefined,
+      } : null);
 
       // Load interactions
       const { data: interactionsData, error: interactionsError } = await supabase
@@ -50,7 +62,16 @@ export default function ContactHistory({ contactId }: ContactHistoryProps) {
         .order('timestamp', { ascending: false });
 
       if (interactionsError) throw interactionsError;
-      setInteractions(interactionsData || []);
+      setInteractions((interactionsData || []).map(i => ({
+        ...i,
+        timestamp: i.timestamp,
+        created_at: i.created_at ? new Date(i.created_at) : undefined,
+        updated_at: i.updated_at ? new Date(i.updated_at) : undefined,
+        summary: i.summary ?? undefined,
+        sentiment: i.sentiment ?? undefined,
+        topics: i.topics ?? undefined,
+        metadata: i.metadata ?? undefined,
+      })));
 
     } catch (error) {
       console.error('Error loading data:', error);
