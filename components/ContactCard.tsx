@@ -25,6 +25,10 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+function isDate(val: unknown): val is Date {
+  return val instanceof Date && !isNaN(val.getTime());
+}
+
 const ContactCard: React.FC<ContactCardProps> = ({
   id,
   name,
@@ -49,7 +53,12 @@ const ContactCard: React.FC<ContactCardProps> = ({
           .limit(5);
 
         if (error) throw error;
-        setConversations(data || []);
+        setConversations(
+          (data || []).map(convo => ({
+            ...convo,
+            timestamp: convo.timestamp ? new Date(convo.timestamp) : undefined,
+          }))
+        );
       } catch (err) {
         setError('Failed to fetch conversation history');
         console.error('Error fetching conversations:', err);
@@ -130,7 +139,7 @@ const ContactCard: React.FC<ContactCardProps> = ({
                     {getConversationTypeIcon(conversation.type)}
                   </span>
                   <span className="contact-card__conversation-date">
-                    {new Date(conversation.timestamp).toLocaleDateString()}
+                    {isDate(conversation.timestamp) ? conversation.timestamp.toLocaleDateString() : ''}
                   </span>
                   {conversation.sentiment && (
                     <span className="contact-card__conversation-sentiment">
