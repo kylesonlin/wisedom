@@ -22,6 +22,7 @@ export interface InteractionAnalysis {
   relationshipStrength: number;
 }
 
+// Canonical FollowUpSuggestion type for the entire app
 export interface FollowUpSuggestion {
   contactId: string;
   type: 'email' | 'call' | 'meeting';

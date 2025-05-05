@@ -1,4 +1,5 @@
 import { Contact, Interaction } from '../types/contact';
+import { FollowUpSuggestion } from './aiAnalysis';
 
 export interface PriorityScore {
   overall: number;
@@ -6,15 +7,6 @@ export interface PriorityScore {
   engagement: number;
   importance: number;
   urgency: number;
-}
-
-export interface FollowUpSuggestion {
-  contactId: string;
-  type: 'email' | 'call' | 'meeting';
-  priority: 'high' | 'medium' | 'low';
-  reason: string;
-  suggestedTime: Date;
-  confidence: number;
 }
 
 // Calculate priority score based on various factors
@@ -183,7 +175,8 @@ export function generateFollowUpSuggestions(
       priority: priorityScore.overall > 0.7 ? 'high' : priorityScore.overall > 0.4 ? 'medium' : 'low',
       reason,
       suggestedTime,
-      confidence
+      confidence,
+      actionItems: []
     });
   }
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Contact, Interaction } from '../types/contact';
-import { PriorityScore, FollowUpSuggestion, calculatePriorityScore, generateFollowUpSuggestions } from '../utils/contactPrioritization';
+import { PriorityScore, calculatePriorityScore, generateFollowUpSuggestions } from '../utils/contactPrioritization';
+import { FollowUpSuggestion } from '../utils/aiAnalysis';
 import { scheduleFollowUp, dismissSuggestion } from '../utils/followUpScheduling';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Contact } from '../types/contact';
-import { FollowUpSuggestion } from '../utils/contactPrioritization';
+import { FollowUpSuggestion } from '../utils/aiAnalysis';
 import { getScheduledFollowUps, updateFollowUpStatus } from '../utils/followUpScheduling';
 import DatePicker from './DatePicker';
 

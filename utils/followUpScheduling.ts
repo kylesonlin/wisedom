@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { TopicAnalysis } from './aiAnalysis';
+import { FollowUpSuggestion } from './aiAnalysis';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -16,14 +17,6 @@ export interface InteractionAnalysis {
   keyPhrases: string[];
   actionItems: ActionItem[];
   relationshipStrength: number;
-}
-
-export interface FollowUpSuggestion {
-  contactId: string;
-  reason: string;
-  priority: 'high' | 'medium' | 'low';
-  suggestedDate: Date;
-  actionItems: string[];
 }
 
 export async function scheduleFollowUp(suggestion: FollowUpSuggestion): Promise<void> {
@@ -94,7 +87,8 @@ export async function getScheduledFollowUps(contactId: string): Promise<FollowUp
       priority: 'medium', // Default priority for scheduled follow-ups
       reason: interaction.summary || 'Scheduled follow-up',
       suggestedTime: new Date(interaction.timestamp),
-      confidence: 1 // Scheduled follow-ups have 100% confidence
+      confidence: 1, // Scheduled follow-ups have 100% confidence
+      actionItems: []
     }));
 
   } catch (error) {

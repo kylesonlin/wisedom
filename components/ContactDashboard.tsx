@@ -7,7 +7,7 @@ import { FilterOptions, SortOptions, filterContacts, sortContacts, getFilterStat
 import PriorityVisualization from './PriorityVisualization';
 import FilterSortControls from './FilterSortControls';
 import AIActionSuggestions from './AIActionSuggestions';
-import { FollowUpSuggestion } from '../utils/followUpScheduling';
+import { FollowUpSuggestion } from '../utils/aiAnalysis';
 
 interface SavedView {
   id: string;
