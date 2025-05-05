@@ -181,7 +181,7 @@ const ContactImport: React.FC = () => {
       setContacts(contacts);
       setActiveStep('review');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to process file');
+      setError(createError(ImportErrorType.FILE_PARSE, 'Failed to process file', err));
       setCurrentStage('error');
     }
   };
