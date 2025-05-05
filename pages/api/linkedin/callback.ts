@@ -70,14 +70,17 @@ export default async function handler(
     });
 
     const connectionsData = await connectionsResponse.json();
+    const now = new Date().toISOString();
     const contacts = connectionsData.elements.map((connection: any) => ({
       name: `${connection.firstName} ${connection.lastName}`,
       email: connection.emailAddress,
-      company: connection.company,
-      position: connection.position,
-      imageUrl: connection.pictureUrl,
+      company: connection.company ?? undefined,
+      position: connection.position ?? undefined,
+      imageUrl: connection.pictureUrl ?? undefined,
       source: 'linkedin',
       rawData: connection,
+      createdAt: now,
+      updatedAt: now,
     }));
 
     // Save contacts to database
