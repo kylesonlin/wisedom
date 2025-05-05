@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import MainLayout from '../../components/MainLayout';
 import Papa from 'papaparse';
 import { createClient } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
 
 interface CsvRow {
   [key: string]: string;
@@ -33,6 +34,7 @@ export default function ImportContactsClient() {
   const [step, setStep] = useState<'upload' | 'map' | 'import' | 'done'>('upload');
   const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: string[] }>({ success: 0, failed: 0, errors: [] });
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const router = useRouter();
 
   // Magic mapping: try to auto-map known fields
   React.useEffect(() => {
@@ -109,17 +111,22 @@ export default function ImportContactsClient() {
         const { error } = await supabase.from('contacts').insert([contact]);
         if (error) {
           failed++;
-          errors.push(error.message);
+          errors.push(`Row: ${JSON.stringify(row)} | Error: ${error.message}`);
+          console.error('Supabase insert error:', error, 'Row:', row);
         } else {
           success++;
         }
       } catch (e: any) {
         failed++;
-        errors.push(e.message);
+        errors.push(`Row: ${JSON.stringify(row)} | Exception: ${e.message}`);
+        console.error('Exception during import:', e, 'Row:', row);
       }
     }
     setImportResult({ success, failed, errors });
     setStep('done');
+    if (failed === 0) {
+      router.push('/rolodex');
+    }
   };
 
   return (
