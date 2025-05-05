@@ -61,7 +61,7 @@ export function filterContacts(
     if (filterOptions.priorityLevels?.length) {
       const priorityScore = priorityScores[contact.id];
       if (!priorityScore) return false;
-      const priority = priorityScore.overall > 0.7 ? 'high' : priorityScore.overall > 0.4 ? 'medium' : 'low';
+      const priority = priorityScore > 0.7 ? 'high' : priorityScore > 0.4 ? 'medium' : 'low';
       if (!filterOptions.priorityLevels.includes(priority)) return false;
     }
 
@@ -146,8 +146,8 @@ export function sortContacts(
 
     switch (sortOptions.field) {
       case 'priority':
-        const scoreA = priorityScores[a.id]?.overall || 0;
-        const scoreB = priorityScores[b.id]?.overall || 0;
+        const scoreA = priorityScores[a.id] || 0;
+        const scoreB = priorityScores[b.id] || 0;
         comparison = scoreA - scoreB;
         break;
 
@@ -222,7 +222,7 @@ export function getFilterStats(
     // Calculate priority distribution
     const priorityScore = priorityScores[contact.id];
     if (priorityScore) {
-      const priority = priorityScore.overall > 0.7 ? 'high' : priorityScore.overall > 0.4 ? 'medium' : 'low';
+      const priority = priorityScore > 0.7 ? 'high' : priorityScore > 0.4 ? 'medium' : 'low';
       priorityDistribution[priority]++;
     }
 

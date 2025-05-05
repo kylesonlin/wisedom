@@ -1,61 +1,55 @@
 import { Contact, Interaction } from '../types/contact';
 import { FollowUpSuggestion } from './aiAnalysis';
 
-export interface PriorityScore {
-  overall: number;
-  recency: number;
-  engagement: number;
-  importance: number;
-  urgency: number;
+export type PriorityScore = number;
+
+export interface PriorityFactors {
+  recencyWeight: number;
+  engagementWeight: number;
+  importanceWeight: number;
+  urgencyWeight: number;
 }
+
+export const DEFAULT_PRIORITY_FACTORS: PriorityFactors = {
+  recencyWeight: 0.3,
+  engagementWeight: 0.3,
+  importanceWeight: 0.2,
+  urgencyWeight: 0.2
+};
 
 // Calculate priority score based on various factors
 export function calculatePriorityScore(
   contact: Contact,
   interactions: Interaction[],
-  timeframe: 'day' | 'week' | 'month' = 'week'
+  factors: PriorityFactors = DEFAULT_PRIORITY_FACTORS
 ): PriorityScore {
   const now = new Date();
-  const timeframeMs = {
-    day: 24 * 60 * 60 * 1000,
-    week: 7 * 24 * 60 * 60 * 1000,
-    month: 30 * 24 * 60 * 60 * 1000
-  }[timeframe];
-
-  // Filter interactions within timeframe
-  const recentInteractions = interactions.filter(
-    i => now.getTime() - new Date(i.timestamp).getTime() <= timeframeMs
-  );
+  const recentInteractions = interactions.filter(i => {
+    const interactionDate = new Date(i.timestamp);
+    return now.getTime() - interactionDate.getTime() <= 30 * 24 * 60 * 60 * 1000; // Last 30 days
+  });
 
   // Calculate recency score (0-1)
   const recencyScore = recentInteractions.length > 0
-    ? 1 - (now.getTime() - new Date(recentInteractions[0].timestamp).getTime()) / timeframeMs
+    ? Math.min(1, recentInteractions.length / 10) // Cap at 10 interactions
     : 0;
 
   // Calculate engagement score (0-1)
-  const engagementScore = Math.min(recentInteractions.length / 10, 1);
+  const engagementScore = recentInteractions.length > 0
+    ? recentInteractions.reduce((sum, i) => sum + (i.sentiment || 0), 0) / recentInteractions.length
+    : 0;
 
-  // Calculate importance score (0-1)
-  const importanceScore = calculateImportanceScore(contact, recentInteractions);
+  // Get importance and urgency from contact
+  const importanceScore = contact.importance || 0;
+  const urgencyScore = contact.urgency || 0;
 
-  // Calculate urgency score (0-1)
-  const urgencyScore = calculateUrgencyScore(contact, recentInteractions);
-
-  // Calculate overall score (weighted average)
-  const overallScore = (
-    recencyScore * 0.2 +
-    engagementScore * 0.3 +
-    importanceScore * 0.3 +
-    urgencyScore * 0.2
+  // Calculate weighted score
+  return (
+    recencyScore * factors.recencyWeight +
+    engagementScore * factors.engagementWeight +
+    importanceScore * factors.importanceWeight +
+    urgencyScore * factors.urgencyWeight
   );
-
-  return {
-    overall: overallScore,
-    recency: recencyScore,
-    engagement: engagementScore,
-    importance: importanceScore,
-    urgency: urgencyScore
-  };
 }
 
 // Calculate importance score based on contact data and interactions
@@ -142,45 +136,52 @@ function calculateInteractionFrequency(interactions: Interaction[]): number {
 
 // Generate follow-up suggestions based on priority scores and interaction history
 export function generateFollowUpSuggestions(
-  contacts: Contact[],
+  contact: Contact,
   interactions: Interaction[],
-  timeframe: 'day' | 'week' | 'month' = 'week'
+  priorityScore: PriorityScore
 ): FollowUpSuggestion[] {
   const suggestions: FollowUpSuggestion[] = [];
+  const now = new Date();
 
-  for (const contact of contacts) {
-    if (!contact.id) continue; // Skip contacts without an ID
-    
-    const contactInteractions = interactions.filter(i => i.contact_id === contact.id);
-    const priorityScore = calculatePriorityScore(contact, contactInteractions, timeframe);
+  // Get recent interactions
+  const recentInteractions = interactions
+    .filter(i => {
+      const interactionDate = new Date(i.timestamp);
+      return now.getTime() - interactionDate.getTime() <= 30 * 24 * 60 * 60 * 1000; // Last 30 days
+    })
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    if (priorityScore.overall < 0.3) continue;
-
-    // Determine follow-up type based on interaction history
-    const lastInteraction = contactInteractions[0];
-    const suggestedType = determineFollowUpType(lastInteraction, contactInteractions);
-
-    // Calculate suggested time based on priority and interaction patterns
-    const suggestedTime = calculateSuggestedTime(contactInteractions, priorityScore);
-
-    // Generate reason for follow-up
-    const reason = generateFollowUpReason(contact, lastInteraction, priorityScore);
-
-    // Calculate confidence based on data quality and patterns
-    const confidence = calculateConfidence(contactInteractions, priorityScore);
-
+  if (recentInteractions.length === 0) {
+    // No recent interactions - suggest a check-in
     suggestions.push({
-      contactId: contact.id,
-      type: suggestedType,
-      priority: priorityScore.overall > 0.7 ? 'high' : priorityScore.overall > 0.4 ? 'medium' : 'low',
-      reason,
-      suggestedTime,
-      confidence,
-      actionItems: []
+      id: `check-in-${contact.id}`,
+      contact,
+      type: 'email',
+      priority: priorityScore > 0.7 ? 'high' : priorityScore > 0.4 ? 'medium' : 'low',
+      reason: 'No recent interactions',
+      suggestedDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+      notes: 'Consider reaching out to maintain the relationship'
     });
+  } else {
+    const lastInteraction = recentInteractions[0];
+    const lastInteractionDate = new Date(lastInteraction.timestamp);
+    const daysSinceLastContact = Math.floor((now.getTime() - lastInteractionDate.getTime()) / (24 * 60 * 60 * 1000));
+
+    // Suggest follow-up based on last interaction
+    if (daysSinceLastContact >= 14) { // 2 weeks
+      suggestions.push({
+        id: `follow-up-${contact.id}`,
+        contact,
+        type: lastInteraction.type === 'email' ? 'call' : 'email',
+        priority: priorityScore > 0.7 ? 'high' : priorityScore > 0.4 ? 'medium' : 'low',
+        reason: `Last contact was ${daysSinceLastContact} days ago`,
+        suggestedDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+        notes: `Consider following up on: ${lastInteraction.summary || 'previous conversation'}`
+      });
+    }
   }
 
-  return suggestions.sort((a, b) => b.confidence - a.confidence);
+  return suggestions;
 }
 
 // Determine the most appropriate follow-up type
@@ -217,7 +218,7 @@ function calculateSuggestedTime(
   const now = new Date();
   
   // Base time on priority score
-  let daysToAdd = 7 * (1 - priorityScore.overall);
+  let daysToAdd = 7 * (1 - priorityScore / 100);
   
   // Adjust based on interaction frequency
   const frequency = calculateInteractionFrequency(interactions);
@@ -252,7 +253,7 @@ function generateFollowUpReason(
     (new Date().getTime() - new Date(lastInteraction.timestamp).getTime()) / (24 * 60 * 60 * 1000)
   );
 
-  if (priorityScore.urgency > 0.7) {
+  if (priorityScore > 70) {
     return `Urgent follow-up needed after ${daysAgo} days since last contact`;
   }
 
@@ -278,7 +279,7 @@ function calculateConfidence(
   confidence += Math.min(interactions.length / 10, 0.2);
 
   // Higher priority score = higher confidence
-  confidence += priorityScore.overall * 0.2;
+  confidence += priorityScore / 100 * 0.2;
 
   // Consider data quality
   const hasQualityData = interactions.some(i => 

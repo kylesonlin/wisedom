@@ -1,27 +1,105 @@
 import { Contact } from '../types/contact';
 
-export enum ImportErrorType {
-  FILE_READ = 'FILE_READ',
-  FILE_PARSE = 'FILE_PARSE',
-  FILE_FORMAT = 'FILE_FORMAT',
-  NORMALIZATION = 'NORMALIZATION',
-  DUPLICATE_DETECTION = 'DUPLICATE_DETECTION',
-  DATABASE = 'DATABASE',
-  VALIDATION = 'VALIDATION',
-  UNKNOWN = 'UNKNOWN'
-}
+export type ImportErrorType = 
+  | 'VALIDATION_ERROR'
+  | 'API_ERROR'
+  | 'DATABASE_ERROR'
+  | 'NETWORK_ERROR'
+  | 'UNKNOWN_ERROR';
 
 export interface ImportError {
   type: ImportErrorType;
   message: string;
-  details?: any;
+  details?: Record<string, any>;
+  context?: Record<string, any>;
   timestamp: Date;
-  context?: {
-    fileFormat?: string;
-    lineNumber?: number;
-    contact?: Partial<Contact>;
-    batchIndex?: number;
-  };
+  userId?: string;
+  sessionId?: string;
+}
+
+export class ValidationError implements ImportError {
+  type: ImportErrorType = 'VALIDATION_ERROR';
+  message: string;
+  details?: Record<string, any>;
+  context?: Record<string, any>;
+  timestamp: Date;
+  userId?: string;
+  sessionId?: string;
+
+  constructor(message: string, details?: Record<string, any>, context?: Record<string, any>) {
+    this.message = message;
+    this.details = details;
+    this.context = context;
+    this.timestamp = new Date();
+  }
+}
+
+export class ApiError implements ImportError {
+  type: ImportErrorType = 'API_ERROR';
+  message: string;
+  details?: Record<string, any>;
+  context?: Record<string, any>;
+  timestamp: Date;
+  userId?: string;
+  sessionId?: string;
+
+  constructor(message: string, details?: Record<string, any>, context?: Record<string, any>) {
+    this.message = message;
+    this.details = details;
+    this.context = context;
+    this.timestamp = new Date();
+  }
+}
+
+export class DatabaseError implements ImportError {
+  type: ImportErrorType = 'DATABASE_ERROR';
+  message: string;
+  details?: Record<string, any>;
+  context?: Record<string, any>;
+  timestamp: Date;
+  userId?: string;
+  sessionId?: string;
+
+  constructor(message: string, details?: Record<string, any>, context?: Record<string, any>) {
+    this.message = message;
+    this.details = details;
+    this.context = context;
+    this.timestamp = new Date();
+  }
+}
+
+export class NetworkError implements ImportError {
+  type: ImportErrorType = 'NETWORK_ERROR';
+  message: string;
+  details?: Record<string, any>;
+  context?: Record<string, any>;
+  timestamp: Date;
+  userId?: string;
+  sessionId?: string;
+
+  constructor(message: string, details?: Record<string, any>, context?: Record<string, any>) {
+    this.message = message;
+    this.details = details;
+    this.context = context;
+    this.timestamp = new Date();
+  }
+}
+
+export class UnknownError implements ImportError {
+  type: ImportErrorType = 'UNKNOWN_ERROR';
+  message: string;
+  details?: Record<string, any>;
+  context?: Record<string, any>;
+  timestamp: Date;
+  userId?: string;
+  sessionId?: string;
+
+  constructor(message: string, details?: Record<string, any>, context?: Record<string, any>) {
+    this.message = message;
+    this.details = details;
+    this.context = context;
+    this.timestamp = new Date();
+  }
 }
 
 export class ImportErrorLogger {
@@ -101,9 +179,9 @@ export function formatErrorForDisplay(error: ImportError): string {
 
 export function isRecoverableError(error: ImportError): boolean {
   const recoverableTypes = [
-    ImportErrorType.FILE_PARSE,
-    ImportErrorType.NORMALIZATION,
-    ImportErrorType.DUPLICATE_DETECTION
+    'VALIDATION_ERROR',
+    'DATABASE_ERROR',
+    'NETWORK_ERROR'
   ];
   
   return recoverableTypes.includes(error.type);
@@ -113,28 +191,22 @@ export function getErrorResolutionSteps(error: ImportError): string[] {
   const steps: string[] = [];
   
   switch (error.type) {
-    case ImportErrorType.FILE_READ:
-      steps.push('Check if the file exists and is accessible');
-      steps.push('Verify file permissions');
-      steps.push('Try uploading the file again');
-      break;
-      
-    case ImportErrorType.FILE_PARSE:
-      steps.push('Verify the file format matches the selected format');
-      steps.push('Check for any malformed data in the file');
-      steps.push('Ensure all required fields are present');
-      break;
-      
-    case ImportErrorType.NORMALIZATION:
-      steps.push('Review the problematic contact data');
+    case 'VALIDATION_ERROR':
+      steps.push('Review the validation error details');
       steps.push('Manually correct the data if possible');
       steps.push('Try importing again with corrected data');
       break;
       
-    case ImportErrorType.DATABASE:
+    case 'DATABASE_ERROR':
       steps.push('Check database connection');
       steps.push('Verify database permissions');
       steps.push('Contact system administrator if issue persists');
+      break;
+      
+    case 'NETWORK_ERROR':
+      steps.push('Check network connection');
+      steps.push('Try the operation again');
+      steps.push('Contact support if the issue persists');
       break;
       
     default:

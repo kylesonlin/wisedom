@@ -1,17 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from './supabase';
 import { Project, ProjectMember, ProjectContact, Task, Milestone } from '../types/project';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 export async function createProject(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<Project> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('projects')
     .insert({
       ...project,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     })
     .select()
     .single();
@@ -20,14 +17,15 @@ export async function createProject(project: Omit<Project, 'id' | 'createdAt' | 
   return data;
 }
 
-export async function updateProject(id: string, updates: Partial<Project>): Promise<Project> {
+export async function updateProject(projectId: string, updates: Partial<Project>): Promise<Project> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('projects')
     .update({
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date().toISOString()
     })
-    .eq('id', id)
+    .eq('id', projectId)
     .select()
     .single();
 
@@ -35,13 +33,39 @@ export async function updateProject(id: string, updates: Partial<Project>): Prom
   return data;
 }
 
-export async function addProjectMember(projectId: string, member: Omit<ProjectMember, 'joinedAt'>): Promise<ProjectMember> {
+export async function getProject(projectId: string): Promise<Project> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('id', projectId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('project_members')
+    .select('*')
+    .eq('project_id', projectId);
+
+  if (error) throw error;
+  return data;
+}
+
+export async function addProjectMember(projectId: string, userId: string, role: string): Promise<ProjectMember> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('project_members')
     .insert({
-      ...member,
-      projectId,
-      joinedAt: new Date()
+      project_id: projectId,
+      user_id: userId,
+      role,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     })
     .select()
     .single();
@@ -50,13 +74,26 @@ export async function addProjectMember(projectId: string, member: Omit<ProjectMe
   return data;
 }
 
-export async function addProjectContact(projectId: string, contact: Omit<ProjectContact, 'addedAt'>): Promise<ProjectContact> {
+export async function getProjectContacts(projectId: string): Promise<ProjectContact[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('project_contacts')
+    .select('*')
+    .eq('project_id', projectId);
+
+  if (error) throw error;
+  return data;
+}
+
+export async function addProjectContact(projectId: string, contactId: string): Promise<ProjectContact> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('project_contacts')
     .insert({
-      ...contact,
-      projectId,
-      addedAt: new Date()
+      project_id: projectId,
+      contact_id: contactId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     })
     .select()
     .single();
@@ -65,14 +102,25 @@ export async function addProjectContact(projectId: string, contact: Omit<Project
   return data;
 }
 
-export async function createTask(projectId: string, task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task> {
+export async function getProjectTasks(projectId: string): Promise<Task[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('project_id', projectId);
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('tasks')
     .insert({
       ...task,
-      projectId,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     })
     .select()
     .single();
@@ -81,14 +129,15 @@ export async function createTask(projectId: string, task: Omit<Task, 'id' | 'cre
   return data;
 }
 
-export async function updateTask(id: string, updates: Partial<Task>): Promise<Task> {
+export async function updateTask(taskId: string, updates: Partial<Task>): Promise<Task> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('tasks')
     .update({
       ...updates,
-      updatedAt: new Date()
+      updatedAt: new Date().toISOString()
     })
-    .eq('id', id)
+    .eq('id', taskId)
     .select()
     .single();
 
@@ -96,13 +145,42 @@ export async function updateTask(id: string, updates: Partial<Task>): Promise<Ta
   return data;
 }
 
-export async function createMilestone(projectId: string, milestone: Omit<Milestone, 'id'>): Promise<Milestone> {
+export async function getProjectMilestones(projectId: string): Promise<Milestone[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('milestones')
+    .select('*')
+    .eq('project_id', projectId);
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createMilestone(milestone: Omit<Milestone, 'id' | 'createdAt' | 'updatedAt'>): Promise<Milestone> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('milestones')
     .insert({
       ...milestone,
-      projectId
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateMilestone(milestoneId: string, updates: Partial<Milestone>): Promise<Milestone> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('milestones')
+    .update({
+      ...updates,
+      updatedAt: new Date().toISOString()
+    })
+    .eq('id', milestoneId)
     .select()
     .single();
 
@@ -111,6 +189,7 @@ export async function createMilestone(projectId: string, milestone: Omit<Milesto
 }
 
 export async function getProjectDetails(projectId: string): Promise<Project> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('projects')
     .select(`
@@ -128,6 +207,7 @@ export async function getProjectDetails(projectId: string): Promise<Project> {
 }
 
 export async function getProjectsByUser(userId: string): Promise<Project[]> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('projects')
     .select(`
@@ -135,38 +215,6 @@ export async function getProjectsByUser(userId: string): Promise<Project[]> {
       teamMembers:project_members(*)
     `)
     .or(`ownerId.eq.${userId},teamMembers.userId.eq.${userId}`);
-
-  if (error) throw error;
-  return data;
-}
-
-export async function getProjectContacts(projectId: string): Promise<ProjectContact[]> {
-  const { data, error } = await supabase
-    .from('project_contacts')
-    .select('*')
-    .eq('projectId', projectId);
-
-  if (error) throw error;
-  return data;
-}
-
-export async function getProjectTasks(projectId: string): Promise<Task[]> {
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('projectId', projectId)
-    .order('dueDate', { ascending: true });
-
-  if (error) throw error;
-  return data;
-}
-
-export async function getProjectMilestones(projectId: string): Promise<Milestone[]> {
-  const { data, error } = await supabase
-    .from('milestones')
-    .select('*')
-    .eq('projectId', projectId)
-    .order('dueDate', { ascending: true });
 
   if (error) throw error;
   return data;

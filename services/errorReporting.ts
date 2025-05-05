@@ -1,10 +1,5 @@
 import { ImportError, ImportErrorType } from '../utils/errorHandling';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { getSupabaseClient } from '../utils/supabase';
 
 interface ErrorMetrics {
   totalErrors: number;
@@ -24,55 +19,89 @@ interface ErrorNotification {
 
 export class ErrorReportingService {
   private static instance: ErrorReportingService;
-  private metrics: ErrorMetrics = {
-    totalErrors: 0,
-    errorsByType: {} as Record<ImportErrorType, number>,
-    errorsByTime: {},
-    averageResolutionTime: 0,
-    recoveryRate: 0
-  };
+  private errorCount: number = 0;
+  private errorsByType: Map<ImportErrorType, number> = new Map();
+  private errorsByTime: Map<string, number> = new Map();
+  private resolutionTimes: number[] = [];
+  private resolvedErrors: number = 0;
   private notifications: ErrorNotification[] = [];
 
   private constructor() {}
 
-  static getInstance(): ErrorReportingService {
+  public static getInstance(): ErrorReportingService {
     if (!ErrorReportingService.instance) {
       ErrorReportingService.instance = new ErrorReportingService();
     }
     return ErrorReportingService.instance;
   }
 
-  async reportError(error: ImportError): Promise<void> {
-    // Update metrics
-    this.updateMetrics(error);
+  public async reportError(error: ImportError): Promise<void> {
+    try {
+      this.errorCount++;
+      this.errorsByType.set(
+        error.type,
+        (this.errorsByType.get(error.type) || 0) + 1
+      );
 
-    // Save error to database
-    await this.saveErrorToDatabase(error);
+      const timeKey = new Date().toISOString().split('T')[0];
+      this.errorsByTime.set(
+        timeKey,
+        (this.errorsByTime.get(timeKey) || 0) + 1
+      );
 
-    // Send notifications
-    await this.sendNotifications(error);
+      await this.saveErrorToDatabase(error);
+      await this.sendNotifications(error);
+    } catch (err) {
+      console.error('Failed to report error:', err);
+    }
   }
 
-  private updateMetrics(error: ImportError): void {
-    this.metrics.totalErrors++;
-    
-    // Update errors by type
-    if (!this.metrics.errorsByType[error.type]) {
-      this.metrics.errorsByType[error.type] = 0;
-    }
-    this.metrics.errorsByType[error.type]++;
+  public async resolveError(errorId: string, resolutionTime: number): Promise<void> {
+    try {
+      this.resolvedErrors++;
+      this.resolutionTimes.push(resolutionTime);
 
-    // Update errors by time (hourly)
-    const hour = error.timestamp.toISOString().slice(0, 13);
-    if (!this.metrics.errorsByTime[hour]) {
-      this.metrics.errorsByTime[hour] = 0;
+      const supabase = getSupabaseClient();
+      const { error: updateError } = await supabase
+        .from('error_logs')
+        .update({
+          resolved: true,
+          resolution_time: resolutionTime,
+          resolved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', errorId);
+
+      if (updateError) throw updateError;
+    } catch (err) {
+      console.error('Failed to resolve error:', err);
     }
-    this.metrics.errorsByTime[hour]++;
+  }
+
+  public getMetrics(): ErrorMetrics {
+    const totalErrors = this.errorCount;
+    const errorsByType = Object.fromEntries(this.errorsByType) as Record<ImportErrorType, number>;
+    const errorsByTime = Object.fromEntries(this.errorsByTime);
+    const averageResolutionTime = this.resolutionTimes.length > 0
+      ? this.resolutionTimes.reduce((a, b) => a + b, 0) / this.resolutionTimes.length
+      : 0;
+    const recoveryRate = this.errorCount > 0
+      ? (this.resolvedErrors / this.errorCount) * 100
+      : 0;
+
+    return {
+      totalErrors,
+      errorsByType,
+      errorsByTime,
+      averageResolutionTime,
+      recoveryRate
+    };
   }
 
   private async saveErrorToDatabase(error: ImportError): Promise<void> {
     try {
-      const { data, error: dbError } = await supabase
+      const supabase = getSupabaseClient();
+      const { error: dbError } = await supabase
         .from('error_logs')
         .insert({
           type: error.type,
@@ -80,13 +109,17 @@ export class ErrorReportingService {
           details: error.details,
           context: error.context,
           timestamp: error.timestamp,
-          user_id: 'current_user_id', // Replace with actual user ID
-          session_id: 'current_session_id' // Replace with actual session ID
+          user_id: error.userId || null,
+          session_id: error.sessionId || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          resolved: false
         });
 
       if (dbError) throw dbError;
     } catch (err) {
       console.error('Failed to save error to database:', err);
+      throw err;
     }
   }
 
@@ -117,10 +150,6 @@ export class ErrorReportingService {
     console.log('Sending email notification:', notification);
   }
 
-  getMetrics(): ErrorMetrics {
-    return this.metrics;
-  }
-
   getNotifications(): ErrorNotification[] {
     return this.notifications;
   }
@@ -131,6 +160,7 @@ export class ErrorReportingService {
     recoveryRate: number;
   }> {
     try {
+      const supabase = getSupabaseClient();
       const { data, error } = await supabase
         .from('error_logs')
         .select('*')

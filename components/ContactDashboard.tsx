@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '../utils/supabase';
 import { Contact, Interaction } from '../types/contact';
 import { PriorityScore } from '../utils/contactPrioritization';
 import { InteractionAnalysis } from '../utils/aiAnalysis';
@@ -18,10 +18,10 @@ interface SavedView {
 }
 
 interface ContactDashboardProps {
-  initialView?: SavedView;
+  initialView?: 'list' | 'grid' | 'timeline';
 }
 
-export default function ContactDashboard({ initialView }: ContactDashboardProps) {
+export default function ContactDashboard({ initialView = 'list' }: ContactDashboardProps) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [priorityScores, setPriorityScores] = useState<Record<string, PriorityScore>>({});
@@ -29,88 +29,83 @@ export default function ContactDashboard({ initialView }: ContactDashboardProps)
   const [followUpSuggestions, setFollowUpSuggestions] = useState<FollowUpSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterOptions, setFilterOptions] = useState<FilterOptions>(initialView?.filterOptions || {});
-  const [sortOptions, setSortOptions] = useState<SortOptions>(initialView?.sortOptions || { field: 'priority', direction: 'desc' });
+  const [view, setView] = useState<'list' | 'grid' | 'timeline'>(initialView);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({});
+  const [sortOptions, setSortOptions] = useState<SortOptions>({ field: 'priority', direction: 'desc' });
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [showSaveViewModal, setShowSaveViewModal] = useState(false);
   const [newViewName, setNewViewName] = useState('');
 
-  // Load data
   useEffect(() => {
-    async function loadData() {
-      try {
-        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-        
-        // Load contacts
-        const { data: contactsData, error: contactsError } = await supabase
-          .from('contacts')
-          .select('*');
-        if (contactsError) throw contactsError;
-        setContacts(
-          (contactsData || []).map(c => ({
-            ...c,
-            createdAt: c.createdAt ? new Date(c.createdAt) : undefined,
-            updatedAt: c.updatedAt ? new Date(c.updatedAt) : undefined,
-            birthday: c.birthday ?? undefined,
-            phone: c.phone ?? undefined,
-            company: c.company ?? undefined,
-            title: c.title ?? undefined,
-            assignedTo: c.assignedTo ?? undefined,
-            notes: c.notes ?? undefined,
-            source: c.source ?? undefined,
-            additionalFields: c.additionalFields ?? undefined,
-          }))
-        );
-
-        // Load interactions
-        const { data: interactionsData, error: interactionsError } = await supabase
-          .from('interactions')
-          .select('*');
-        if (interactionsError) throw interactionsError;
-        setInteractions(
-          (interactionsData || []).map(i => ({
-            ...i,
-            timestamp: i.timestamp,
-            created_at: i.created_at ? new Date(i.created_at) : undefined,
-            updated_at: i.updated_at ? new Date(i.updated_at) : undefined,
-            summary: i.summary ?? undefined,
-            sentiment: i.sentiment ?? undefined,
-            topics: i.topics ?? undefined,
-            metadata: i.metadata ?? undefined,
-          }))
-        );
-
-        // Calculate priority scores, interaction analyses, and follow-up suggestions
-        const scores: Record<string, PriorityScore> = {};
-        const analyses: Record<string, InteractionAnalysis> = {};
-        const suggestions: FollowUpSuggestion[] = [];
-        
-        for (const contact of contactsData || []) {
-          if (!contact.id) continue;
-          const contactInteractions = interactionsData?.filter(i => i.contact_id === contact.id) || [];
-          // Calculate priority score and interaction analysis here
-          // This would use your existing AI analysis functions
-          // Also generate follow-up suggestions
-        }
-
-        setPriorityScores(scores);
-        setInteractionAnalyses(analyses);
-        setFollowUpSuggestions(suggestions);
-        setLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-        setLoading(false);
-      }
-    }
-
     loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const supabase = getSupabaseClient();
+      
+      // Load contacts
+      const { data: contactsData, error: contactsError } = await supabase
+        .from('contacts')
+        .select('*');
+      if (contactsError) throw contactsError;
+      setContacts(
+        (contactsData || []).map(c => ({
+          ...c,
+          createdAt: new Date(c.created_at),
+          updatedAt: new Date(c.updated_at),
+          birthday: c.birthday ? new Date(c.birthday) : undefined
+        }))
+      );
+
+      // Load interactions
+      const { data: interactionsData, error: interactionsError } = await supabase
+        .from('interactions')
+        .select('*');
+      if (interactionsError) throw interactionsError;
+      setInteractions(
+        (interactionsData || []).map(i => ({
+          ...i,
+          timestamp: new Date(i.timestamp),
+          created_at: new Date(i.created_at),
+          updated_at: new Date(i.updated_at)
+        }))
+      );
+
+      // Calculate priority scores, interaction analyses, and follow-up suggestions
+      const scores: Record<string, PriorityScore> = {};
+      const analyses: Record<string, InteractionAnalysis> = {};
+      const suggestions: FollowUpSuggestion[] = [];
+      
+      for (const contact of contactsData || []) {
+        if (!contact.id) continue;
+        const contactInteractions = interactionsData?.filter(i => i.contact_id === contact.id) || [];
+        // Calculate priority score and interaction analysis here
+        // This would use your existing AI analysis functions
+        // Also generate follow-up suggestions
+      }
+
+      setPriorityScores(scores);
+      setInteractionAnalyses(analyses);
+      setFollowUpSuggestions(suggestions);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Load saved views
   useEffect(() => {
     async function loadSavedViews() {
       try {
-        const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+        const supabase = getSupabaseClient();
         const { data, error } = await supabase
           .from('saved_views')
           .select('*')
@@ -131,15 +126,25 @@ export default function ContactDashboard({ initialView }: ContactDashboardProps)
     loadSavedViews();
   }, []);
 
+  const filteredContacts = contacts.filter(contact => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      contact.name.toLowerCase().includes(searchLower) ||
+      contact.email.toLowerCase().includes(searchLower) ||
+      (contact.company?.toLowerCase().includes(searchLower) ?? false) ||
+      (contact.phone?.toLowerCase().includes(searchLower) ?? false)
+    );
+  });
+
   // Filter and sort contacts
-  const filteredContacts = filterContacts(contacts, interactions, filterOptions, priorityScores, interactionAnalyses);
-  const sortedContacts = sortContacts(filteredContacts, interactions, sortOptions, priorityScores, interactionAnalyses);
+  const filteredContactsList = filterContacts(contacts, interactions, filterOptions, priorityScores, interactionAnalyses);
+  const sortedContacts = sortContacts(filteredContactsList, interactions, sortOptions, priorityScores, interactionAnalyses);
   const stats = getFilterStats(contacts, interactions, filterOptions, priorityScores, interactionAnalyses);
 
   // Save view
   const handleSaveView = async () => {
     try {
-      const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+      const supabase = getSupabaseClient();
       const { data, error } = await supabase
         .from('saved_views')
         .insert({
@@ -172,34 +177,101 @@ export default function ContactDashboard({ initialView }: ContactDashboardProps)
     setSortOptions(view.sortOptions);
   };
 
-  if (loading) return <div className="p-4">Loading...</div>;
-  if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
+  if (loading) {
+    return <div>Loading contacts...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">Error: {error}</div>;
+  }
 
   return (
-    <div className="p-4 space-y-6">
-      {/* Header */}
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Contact Dashboard</h1>
-        <button
-          onClick={() => setShowSaveViewModal(true)}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Save Current View
-        </button>
-      </div>
-
-      {/* Filter and Sort Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Filters</h2>
-          <FilterSortControls
-            filterOptions={filterOptions}
-            sortOptions={sortOptions}
-            onFilterChange={setFilterOptions}
-            onSortChange={setSortOptions}
+        <h1 className="text-2xl font-semibold">Contacts</h1>
+        <div className="flex space-x-4">
+          <input
+            type="text"
+            placeholder="Search contacts..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-4 py-2 border rounded-md"
           />
+          <select
+            value={view}
+            onChange={(e) => setView(e.target.value as 'list' | 'grid' | 'timeline')}
+            className="px-4 py-2 border rounded-md"
+          >
+            <option value="list">List View</option>
+            <option value="grid">Grid View</option>
+            <option value="timeline">Timeline View</option>
+          </select>
         </div>
       </div>
+
+      {filteredContacts.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No contacts found</p>
+        </div>
+      ) : (
+        <div className={view === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+          {filteredContacts.map(contact => (
+            <div
+              key={contact.id}
+              className={`p-4 bg-white rounded-lg shadow ${
+                selectedContact?.id === contact.id ? 'ring-2 ring-blue-500' : ''
+              }`}
+              onClick={() => setSelectedContact(contact)}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-medium">{contact.name}</h3>
+                  <p className="text-sm text-gray-600">{contact.email}</p>
+                  {contact.company && (
+                    <p className="text-sm text-gray-500">{contact.company}</p>
+                  )}
+                </div>
+                {contact.importance && (
+                  <div className="text-sm font-medium">
+                    Priority: {contact.importance > 0.7 ? 'High' : contact.importance > 0.4 ? 'Medium' : 'Low'}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedContact && (
+        <div className="mt-8 p-4 bg-white rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Contact Details</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p><span className="font-medium">Name:</span> {selectedContact.name}</p>
+              <p><span className="font-medium">Email:</span> {selectedContact.email}</p>
+              {selectedContact.phone && (
+                <p><span className="font-medium">Phone:</span> {selectedContact.phone}</p>
+              )}
+              {selectedContact.company && (
+                <p><span className="font-medium">Company:</span> {selectedContact.company}</p>
+              )}
+              {selectedContact.title && (
+                <p><span className="font-medium">Title:</span> {selectedContact.title}</p>
+              )}
+            </div>
+            <div>
+              {selectedContact.birthday && (
+                <p><span className="font-medium">Birthday:</span> {selectedContact.birthday.toLocaleDateString()}</p>
+              )}
+              {selectedContact.notes && (
+                <p><span className="font-medium">Notes:</span> {selectedContact.notes}</p>
+              )}
+              <p><span className="font-medium">Created:</span> {selectedContact.createdAt.toLocaleDateString()}</p>
+              <p><span className="font-medium">Last Updated:</span> {selectedContact.updatedAt.toLocaleDateString()}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -243,7 +315,10 @@ export default function ContactDashboard({ initialView }: ContactDashboardProps)
               <div className="flex justify-between items-start">
                 <h3 className="font-semibold">{view.name}</h3>
                 <button
-                  onClick={() => handleApplyView(view)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleApplyView(view);
+                  }}
                   className="text-blue-500 hover:text-blue-600"
                 >
                   Apply
@@ -252,36 +327,6 @@ export default function ContactDashboard({ initialView }: ContactDashboardProps)
               <p className="text-sm text-gray-500">
                 Created {view.createdAt.toLocaleDateString()}
               </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Contact List */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Contacts ({sortedContacts.length})</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sortedContacts.map(contact => (
-            <div key={contact.id} className="bg-white p-4 rounded shadow">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold">{contact.name}</h3>
-                  <p className="text-sm text-gray-500">{contact.company}</p>
-                </div>
-                <PriorityVisualization
-                  priorityScore={priorityScores[contact.id!]}
-                  interactionAnalysis={interactionAnalyses[contact.id!]}
-                />
-              </div>
-              <div className="mt-4">
-                <AIActionSuggestions
-                  contact={contact}
-                  interactions={interactions.filter(i => i.contact_id === contact.id)}
-                  priorityScore={priorityScores[contact.id!]}
-                  interactionAnalysis={interactionAnalyses[contact.id!]}
-                  followUpSuggestions={followUpSuggestions.filter(s => s.contactId === contact.id)}
-                />
-              </div>
             </div>
           ))}
         </div>

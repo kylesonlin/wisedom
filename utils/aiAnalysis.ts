@@ -8,10 +8,10 @@ export interface ActionItem {
 }
 
 export interface TopicAnalysis {
-  topic: string;
+  topics: string[];
   sentiment: number;
-  frequency: number;
-  importance: number;
+  keyPoints: string[];
+  actionItems: string[];
 }
 
 export interface InteractionAnalysis {
@@ -24,13 +24,13 @@ export interface InteractionAnalysis {
 
 // Canonical FollowUpSuggestion type for the entire app
 export interface FollowUpSuggestion {
-  contactId: string;
-  type: 'email' | 'call' | 'meeting';
-  priority: 'high' | 'medium' | 'low';
+  id: string;
+  contact: Contact;
   reason: string;
+  type: 'email' | 'call' | 'meeting';
   suggestedTime: Date;
+  priority: 'high' | 'medium' | 'low';
   confidence: number;
-  actionItems: string[];
 }
 
 export async function analyzeInteraction(interaction: Interaction): Promise<InteractionAnalysis> {
@@ -38,10 +38,10 @@ export async function analyzeInteraction(interaction: Interaction): Promise<Inte
   return {
     topics: [
       {
-        topic: 'Project Discussion',
+        topics: ['Project Discussion'],
         sentiment: 0.8,
-        frequency: 1,
-        importance: 0.9
+        keyPoints: [],
+        actionItems: []
       }
     ],
     overallSentiment: 0.8,
@@ -225,37 +225,10 @@ export function analyzeInteractionSentiment(interaction: Interaction): number {
 }
 
 export function generateFollowUpSuggestions(
-  contact: Contact,
-  interaction: Interaction
-): string[] {
-  const suggestions: string[] = [];
-
-  // Add time-based suggestions
-  const hoursSinceInteraction = Math.ceil(
-    (Date.now() - new Date(interaction.timestamp).getTime()) / (1000 * 60 * 60)
-  );
-
-  if (hoursSinceInteraction > 24) {
-    suggestions.push('Send a follow-up email to check in');
-  }
-
-  // Add sentiment-based suggestions
-  const sentiment = analyzeInteractionSentiment(interaction);
-  if (sentiment < 0) {
-    suggestions.push('Schedule a call to address concerns');
-  } else if (sentiment > 0) {
-    suggestions.push('Send a thank you note');
-  }
-
-  // Add priority-based suggestions
-  if (interaction.metadata && interaction.metadata.priority === 'high') {
-    suggestions.push('Schedule an immediate follow-up meeting');
-  }
-
-  // Add relationship-based suggestions
-  if (contact.relationshipStrength && contact.relationshipStrength < 0.5) {
-    suggestions.push('Plan a relationship-building activity');
-  }
-
-  return suggestions;
+  contacts: Contact[],
+  interactions: any[],
+  timeframe: 'day' | 'week' | 'month'
+): FollowUpSuggestion[] {
+  // This is a placeholder for actual AI suggestions
+  return [];
 } 

@@ -5,33 +5,28 @@ export interface Contact {
   phone?: string;
   company?: string;
   title?: string;
-  birthday?: string;
-  relationshipStrength?: number;
-  assignedTo?: string;
-  tags?: string[];
+  birthday?: Date;
   notes?: string;
+  source?: string;
+  importance?: number;
+  urgency?: number;
+  assignedTo?: string;
+  additionalFields?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
-  source?: string;
-  additionalFields?: Record<string, any>;
 }
 
 export interface Interaction {
   id: string;
   contact_id: string;
   type: 'email' | 'call' | 'meeting' | 'note';
-  timestamp: string;
+  timestamp: Date;
   summary?: string;
   sentiment?: number;
   topics?: string[];
-  metadata?: {
-    pendingAction?: string;
-    followUpRequired?: boolean;
-    suggestedNextAction?: 'email' | 'call' | 'meeting';
-    [key: string]: any;
-  };
-  created_at: string;
-  updated_at: string;
+  metadata?: Record<string, any>;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export type FilterGroupOperation = {
