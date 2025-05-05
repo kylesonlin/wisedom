@@ -25,7 +25,7 @@ export async function scheduleFollowUp(suggestion: FollowUpSuggestion): Promise<
     const { error } = await supabase
       .from('interactions')
       .insert({
-        contact_id: suggestion.contact.id,
+        contact_id: suggestion.contactId,
         type: suggestion.type,
         timestamp: suggestion.suggestedTime.toISOString(),
         summary: `Scheduled follow-up: ${suggestion.reason}`,
@@ -52,7 +52,7 @@ export async function dismissSuggestion(suggestion: FollowUpSuggestion): Promise
     const { error } = await supabase
       .from('interactions')
       .insert({
-        contact_id: suggestion.contact.id,
+        contact_id: suggestion.contactId,
         type: 'note',
         timestamp: new Date().toISOString(),
         summary: `Dismissed follow-up suggestion: ${suggestion.reason}`,
@@ -83,12 +83,14 @@ export async function getScheduledFollowUps(contactId: string): Promise<FollowUp
 
     return (data || []).map(interaction => ({
       id: interaction.id,
-      contact: { id: interaction.contact_id } as any, // TODO: fetch full contact if needed
-      type: interaction.type as 'email' | 'call' | 'meeting',
-      priority: 'medium', // Default priority for scheduled follow-ups
+      contactId: interaction.contact_id,
+      contactName: interaction.contact_name || 'Unknown Contact',
+      type: interaction.type as 'email' | 'call' | 'meeting' | 'follow-up',
+      priority: 'medium',
       reason: interaction.summary || 'Scheduled follow-up',
+      suggestedAction: 'Follow up as scheduled',
       suggestedTime: new Date(interaction.timestamp),
-      confidence: 1 // Scheduled follow-ups have 100% confidence
+      confidence: 1
     }));
 
   } catch (error) {
@@ -103,7 +105,12 @@ export async function updateFollowUpStatus(
   newTime?: Date
 ): Promise<void> {
   try {
-    const updateData: any = {
+    const updateData: {
+      metadata: {
+        status: 'completed' | 'cancelled' | 'rescheduled';
+      };
+      timestamp?: string;
+    } = {
       metadata: {
         status
       }

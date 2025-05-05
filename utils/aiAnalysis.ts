@@ -38,8 +38,9 @@ export interface FollowUpSuggestion {
   priority: 'high' | 'medium' | 'low';
   reason: string;
   suggestedAction: string;
-  dueDate: Date;
-  suggestedTime?: Date;
+  suggestedTime: Date;
+  confidence?: number;
+  notes?: string;
 }
 
 export async function analyzeInteraction(interaction: Interaction): Promise<InteractionAnalysis> {
@@ -244,9 +245,9 @@ export function analyzeInteractionSentiment(interaction: Interaction): number {
 }
 
 export function generateFollowUpSuggestions(
-  contacts: Contact[],
-  interactions: any[],
-  timeframe: 'day' | 'week' | 'month'
+  contact: Contact,
+  interactions: Interaction[],
+  priorityScore: number
 ): FollowUpSuggestion[] {
   // This is a placeholder for actual AI suggestions
   return [];

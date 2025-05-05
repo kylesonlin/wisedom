@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSupabaseClient } from '../utils/supabase';
 import { Contact, Interaction } from '../types/contact';
-import { PriorityScore, calculatePriorityScore, generateFollowUpSuggestions } from '../utils/contactPrioritization';
+import { PriorityScore, calculatePriorityScore, generateFollowUpSuggestions, PriorityFactors, DEFAULT_PRIORITY_FACTORS } from '../utils/contactPrioritization';
 import { FollowUpSuggestion } from '../utils/aiAnalysis';
 import { scheduleFollowUp, dismissSuggestion } from '../utils/followUpScheduling';
 
@@ -12,12 +12,7 @@ export default function ContactPrioritization() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month'>('week');
-  const [priorityFactors, setPriorityFactors] = useState({
-    recencyWeight: 0.2,
-    engagementWeight: 0.3,
-    importanceWeight: 0.3,
-    urgencyWeight: 0.2
-  });
+  const [priorityFactors, setPriorityFactors] = useState<PriorityFactors>(DEFAULT_PRIORITY_FACTORS);
 
   useEffect(() => {
     loadData();
@@ -157,7 +152,7 @@ export default function ContactPrioritization() {
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-medium">{suggestion.contact.name}</h4>
+                    <h4 className="font-medium">{suggestion.contactName}</h4>
                     <p className="text-sm text-gray-600 mt-1">{suggestion.reason}</p>
                   </div>
                   <div className="flex space-x-2">

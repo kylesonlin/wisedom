@@ -1,16 +1,5 @@
 import { Contact, Interaction } from '../types/contact';
-import { FollowUpSuggestion as AiFollowUpSuggestion } from './aiAnalysis';
-
-export interface FollowUpSuggestion {
-  id: string;
-  contact: Contact;
-  type: 'email' | 'call' | 'meeting';
-  priority: 'high' | 'medium' | 'low';
-  reason: string;
-  suggestedTime: Date;
-  notes?: string;
-  confidence: number;
-}
+import { FollowUpSuggestion } from './aiAnalysis';
 
 export type PriorityScore = number;
 
@@ -150,8 +139,8 @@ export function generateFollowUpSuggestions(
   contact: Contact,
   interactions: Interaction[],
   priorityScore: PriorityScore
-): AiFollowUpSuggestion[] {
-  const suggestions: AiFollowUpSuggestion[] = [];
+): FollowUpSuggestion[] {
+  const suggestions: FollowUpSuggestion[] = [];
   const now = new Date();
 
   // Get recent interactions
@@ -166,10 +155,12 @@ export function generateFollowUpSuggestions(
     // No recent interactions - suggest a check-in
     suggestions.push({
       id: `check-in-${contact.id}`,
-      contact,
+      contactId: contact.id,
+      contactName: contact.name,
       type: 'email',
       priority: priorityScore > 0.7 ? 'high' : priorityScore > 0.4 ? 'medium' : 'low',
       reason: 'No recent interactions',
+      suggestedAction: 'Schedule a check-in call',
       suggestedTime: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
       confidence: 0.7
     });
@@ -182,10 +173,12 @@ export function generateFollowUpSuggestions(
     if (daysSinceLastContact >= 14) { // 2 weeks
       suggestions.push({
         id: `follow-up-${contact.id}`,
-        contact,
+        contactId: contact.id,
+        contactName: contact.name,
         type: lastInteraction.type === 'email' ? 'call' : 'email',
         priority: priorityScore > 0.7 ? 'high' : priorityScore > 0.4 ? 'medium' : 'low',
         reason: `Last contact was ${daysSinceLastContact} days ago`,
+        suggestedAction: `Schedule a ${lastInteraction.type === 'email' ? 'call' : 'email'} follow-up`,
         suggestedTime: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
         confidence: 0.7
       });
