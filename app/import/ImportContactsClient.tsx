@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import MainLayout from '../../components/MainLayout';
 import Papa from 'papaparse';
 import { createClient } from '@supabase/supabase-js';
@@ -34,6 +34,11 @@ export default function ImportContactsClient() {
   const [step, setStep] = useState<'upload' | 'map' | 'import' | 'done'>('upload');
   const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: string[] }>({ success: 0, failed: 0, errors: [] });
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [progress, setProgress] = useState(0); // 0-100
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [lastProgressTime, setLastProgressTime] = useState<number | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
+  const progressRef = useRef(0);
   const router = useRouter();
 
   // Magic mapping: try to auto-map known fields
@@ -48,6 +53,21 @@ export default function ImportContactsClient() {
     }
     // eslint-disable-next-line
   }, [step, headers]);
+
+  // Timeout checker
+  React.useEffect(() => {
+    if (step === 'import') {
+      setStartTime(Date.now());
+      setLastProgressTime(Date.now());
+      setTimedOut(false);
+      const interval = setInterval(() => {
+        if (progressRef.current < 100 && lastProgressTime && Date.now() - lastProgressTime > 30000) {
+          setTimedOut(true);
+        }
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [step, lastProgressTime]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -77,10 +97,16 @@ export default function ImportContactsClient() {
 
   const handleImport = async () => {
     setStep('import');
+    setProgress(0);
+    setStartTime(Date.now());
+    setLastProgressTime(Date.now());
+    setTimedOut(false);
     let success = 0;
     let failed = 0;
     const errors: string[] = [];
-    for (const row of csvData) {
+    const total = csvData.length;
+    for (let i = 0; i < total; i++) {
+      const row = csvData[i];
       try {
         // Build contact object
         const contact: any = {
@@ -121,6 +147,11 @@ export default function ImportContactsClient() {
         errors.push(`Row: ${JSON.stringify(row)} | Exception: ${e.message}`);
         console.error('Exception during import:', e, 'Row:', row);
       }
+      // Update progress
+      const percent = Math.round(((i + 1) / total) * 100);
+      setProgress(percent);
+      progressRef.current = percent;
+      setLastProgressTime(Date.now());
     }
     setImportResult({ success, failed, errors });
     setStep('done');
@@ -128,6 +159,15 @@ export default function ImportContactsClient() {
       router.push('/rolodex');
     }
   };
+
+  // Estimate time remaining
+  let estTime = null;
+  if (step === 'import' && startTime && progress > 0 && progress < 100) {
+    const elapsed = (Date.now() - startTime) / 1000; // seconds
+    const estTotal = elapsed / (progress / 100);
+    const estLeft = estTotal - elapsed;
+    estTime = estLeft > 0 ? `${Math.round(estLeft)}s remaining` : null;
+  }
 
   return (
     <MainLayout>
@@ -180,7 +220,22 @@ export default function ImportContactsClient() {
           </div>
         )}
         {step === 'import' && (
-          <div className="mt-6 text-gray-500">Importing contacts...</div>
+          <div className="mt-6 flex flex-col items-center">
+            <div className="mb-2">Importing contacts...</div>
+            <div className="w-full bg-gray-200 rounded h-4 mb-2">
+              <div
+                className="bg-blue-500 h-4 rounded"
+                style={{ width: `${progress}%`, transition: 'width 0.3s' }}
+              />
+            </div>
+            <div className="mb-2 text-sm text-gray-600">{progress}% {estTime && `- ${estTime}`}</div>
+            <div className="flex items-center justify-center mt-2">
+              <span className="inline-block w-6 h-6 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+            {timedOut && (
+              <div className="mt-4 text-red-600 text-sm">This is taking longer than expected. Please check your connection or try a smaller file.</div>
+            )}
+          </div>
         )}
         {step === 'done' && (
           <div className="mt-6">
