@@ -13,6 +13,7 @@ export interface Contact {
   createdAt: Date;
   updatedAt: Date;
   source?: string;
+  additionalFields?: Record<string, any>;
 }
 
 export interface Interaction {
