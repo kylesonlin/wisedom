@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { getSupabaseClient } from '../utils/supabase';
 import { Contact, Interaction } from '../types/contact';

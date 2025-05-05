@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { Contact } from '../types/contact';
 import { Interaction } from '../types/interaction';

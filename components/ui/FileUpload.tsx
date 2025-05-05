@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { cn } from '../../utils/cn';
 import { Upload, X } from 'lucide-react';

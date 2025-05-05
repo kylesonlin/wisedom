@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { Project, Task, Milestone, ProjectContact } from '../types/project';
 import { Contact } from '../types/contact';

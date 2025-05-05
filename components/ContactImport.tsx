@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Contact, FilterGroupOperation, BatchOperation, ImportOperation } from '../types/contact';
