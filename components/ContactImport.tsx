@@ -284,12 +284,7 @@ const ContactImport: React.FC = () => {
 
       // Enhanced conflict detection
       const conflicts = contactsToSave.filter(contact => 
-        existingContacts?.some(existing => {
-          const emailMatch = contact.email && existing.email === contact.email;
-          const phoneMatch = contact.phone && existing.phone === contact.phone;
-          const nameSimilarity = calculateSimilarity(contact.name, existing.name);
-          return emailMatch || phoneMatch || nameSimilarity > 0.8;
-        })
+        existingContacts?.some(existing => isPotentialDuplicate(contact, existing))
       );
 
       // Update analytics
@@ -1138,6 +1133,22 @@ const ContactImport: React.FC = () => {
 
     return merged;
   };
+
+  // Add this utility function for duplicate detection
+  function isPotentialDuplicate(contactA: Contact, contactB: Contact): boolean {
+    const emailMatch = contactA.email && contactB.email && contactA.email === contactB.email;
+    const phoneMatch = contactA.phone && contactB.phone && contactA.phone === contactB.phone;
+    const nameMatch = contactA.name && contactB.name && contactA.name.trim().toLowerCase() === contactB.name.trim().toLowerCase();
+    // Flag as potential duplicate if:
+    // - Email matches, or
+    // - Phone matches, or
+    // - Name matches AND (email or phone exists for both)
+    return (
+      emailMatch ||
+      phoneMatch ||
+      (nameMatch && (contactA.email || contactA.phone) && (contactB.email || contactB.phone))
+    );
+  }
 
   return (
     <div className="contact-import">
@@ -2124,11 +2135,6 @@ const ContactImport: React.FC = () => {
         .preview-field {
           display: flex;
           gap: 10px;
-        }
-
-        .field-name {
-          font-weight: bold;
-          min-width: 100px;
         }
 
         .preview-more {
