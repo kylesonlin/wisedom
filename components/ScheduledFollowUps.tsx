@@ -38,7 +38,21 @@ export default function ScheduledFollowUps() {
         .select('*');
 
       if (contactsError) throw contactsError;
-      setContacts(contactsData || []);
+      setContacts(
+        (contactsData || []).map(c => ({
+          ...c,
+          createdAt: c.createdAt ? new Date(c.createdAt) : undefined,
+          updatedAt: c.updatedAt ? new Date(c.updatedAt) : undefined,
+          birthday: c.birthday ?? undefined,
+          phone: c.phone ?? undefined,
+          company: c.company ?? undefined,
+          title: c.title ?? undefined,
+          assignedTo: c.assignedTo ?? undefined,
+          notes: c.notes ?? undefined,
+          source: c.source ?? undefined,
+          additionalFields: c.additionalFields ?? undefined,
+        }))
+      );
 
     } catch (error) {
       console.error('Error loading data:', error);
