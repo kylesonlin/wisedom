@@ -32,6 +32,20 @@ export default function ImportContactsClient() {
   const [mapping, setMapping] = useState<{ [key: string]: string }>({});
   const [step, setStep] = useState<'upload' | 'map' | 'import' | 'done'>('upload');
   const [importResult, setImportResult] = useState<{ success: number; failed: number; errors: string[] }>({ success: 0, failed: 0, errors: [] });
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Magic mapping: try to auto-map known fields
+  React.useEffect(() => {
+    if (step === 'map' && headers.length > 0) {
+      const autoMapping: { [key: string]: string } = {};
+      contactFields.forEach(field => {
+        const match = headers.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === field.label.toLowerCase().replace(/[^a-z0-9]/g, ''));
+        if (match) autoMapping[field.value] = match;
+      });
+      setMapping(autoMapping);
+    }
+    // eslint-disable-next-line
+  }, [step, headers]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -70,26 +84,28 @@ export default function ImportContactsClient() {
         const contact: any = {
           additionalFields: {},
         };
-        // Name: combine first and last if mapped
-        if (mapping['name']) {
-          if (mapping['name'].includes('First') && mapping['name'].includes('Last')) {
-            contact.name = `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim();
-          } else {
-            contact.name = row[mapping['name']];
+        // Magic mapping for known fields
+        contactFields.forEach(field => {
+          const csvCol = mapping[field.value] || headers.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === field.label.toLowerCase().replace(/[^a-z0-9]/g, ''));
+          if (csvCol && row[csvCol]) {
+            if (field.value === 'name' && (csvCol.includes('First') && csvCol.includes('Last'))) {
+              contact.name = `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim();
+            } else if (['email', 'phone', 'company', 'title'].includes(field.value)) {
+              contact[field.value] = row[csvCol];
+            } else {
+              contact.additionalFields[field.value] = row[csvCol];
+            }
           }
-        }
-        if (mapping['email']) contact.email = row[mapping['email']];
-        if (mapping['phone']) contact.phone = row[mapping['phone']];
-        if (mapping['company']) contact.company = row[mapping['company']];
-        if (mapping['title']) contact.title = row[mapping['title']];
-        // Additional fields
-        if (mapping['linkedin']) contact.additionalFields.linkedin = row[mapping['linkedin']];
-        if (mapping['date_of_connection']) contact.additionalFields.date_of_connection = row[mapping['date_of_connection']];
-        if (mapping['secondary_phone']) contact.additionalFields.secondary_phone = row[mapping['secondary_phone']];
-        // Required fields
+        });
+        // Store all unmapped columns in additionalFields
+        headers.forEach(header => {
+          const isMapped = Object.values(mapping).includes(header) || contactFields.some(f => header.toLowerCase().replace(/[^a-z0-9]/g, '') === f.label.toLowerCase().replace(/[^a-z0-9]/g, ''));
+          if (!isMapped && row[header]) {
+            contact.additionalFields[header] = row[header];
+          }
+        });
         contact.createdAt = new Date().toISOString();
         contact.updatedAt = new Date().toISOString();
-        // Insert into Supabase
         const { error } = await supabase.from('contacts').insert([contact]);
         if (error) {
           failed++;
@@ -123,23 +139,31 @@ export default function ImportContactsClient() {
         {step === 'map' && csvData.length > 0 && (
           <div className="mt-6">
             <h2 className="text-lg font-semibold mb-2">Map CSV Columns to Contact Fields</h2>
-            <div className="space-y-4">
-              {contactFields.map((field) => (
-                <div key={field.value} className="flex items-center space-x-4">
-                  <label className="w-48 font-medium">{field.label}</label>
-                  <select
-                    className="border rounded px-2 py-1"
-                    value={mapping[field.value] || ''}
-                    onChange={(e) => handleMappingChange(field.value, e.target.value)}
-                  >
-                    <option value="">None</option>
-                    {headers.map((header) => (
-                      <option key={header} value={header}>{header}</option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
+            <button
+              className="mb-4 px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+              onClick={() => setShowAdvanced(v => !v)}
+            >
+              {showAdvanced ? 'Hide Advanced Import Settings' : 'Show Advanced Import Settings'}
+            </button>
+            {showAdvanced && (
+              <div className="space-y-4">
+                {contactFields.map((field) => (
+                  <div key={field.value} className="flex items-center space-x-4">
+                    <label className="w-48 font-medium">{field.label}</label>
+                    <select
+                      className="border rounded px-2 py-1"
+                      value={mapping[field.value] || ''}
+                      onChange={(e) => handleMappingChange(field.value, e.target.value)}
+                    >
+                      <option value="">None</option>
+                      {headers.map((header) => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
             <button
               className="mt-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               onClick={handleImport}
@@ -153,20 +177,16 @@ export default function ImportContactsClient() {
         )}
         {step === 'done' && (
           <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-2">Import Complete</h2>
-            <div className="mb-2 text-green-700">Successfully imported: {importResult.success}</div>
-            {importResult.failed > 0 && (
-              <div className="mb-2 text-red-700">Failed: {importResult.failed}</div>
-            )}
+            <div className="text-green-600 font-semibold mb-2">Import complete!</div>
+            <div>Success: {importResult.success}</div>
+            <div>Failed: {importResult.failed}</div>
             {importResult.errors.length > 0 && (
-              <details className="mt-2">
-                <summary className="cursor-pointer text-sm text-gray-600">Show Errors</summary>
-                <ul className="text-xs text-red-600 list-disc ml-6">
-                  {importResult.errors.map((err, i) => (
-                    <li key={i}>{err}</li>
-                  ))}
+              <div className="mt-2 text-red-600">
+                <div>Errors:</div>
+                <ul className="list-disc ml-6">
+                  {importResult.errors.map((err, i) => <li key={i}>{err}</li>)}
                 </ul>
-              </details>
+              </div>
             )}
           </div>
         )}
