@@ -130,7 +130,7 @@ export default function PriorityVisualization({
                     className="text-sm text-gray-600 flex items-center"
                   >
                     <span className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                    {item}
+                    {item.description}
                   </li>
                 ))}
               </ul>
