@@ -53,13 +53,14 @@ export default function AIActionSuggestions({ userId }: AIActionSuggestionsProps
 
           if (daysSinceLastInteraction > 30) {
             suggestions.push({
+              id: `followup-${contact.id}-${Date.now()}`,
               contactId: contact.id,
               contactName: contact.name,
               type: 'follow-up',
               priority: 'high',
               reason: `No interaction in ${daysSinceLastInteraction} days`,
               suggestedAction: 'Schedule a catch-up call',
-              dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+              suggestedTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
             });
           }
         }
@@ -110,7 +111,7 @@ export default function AIActionSuggestions({ userId }: AIActionSuggestionsProps
                 </div>
               </div>
               <div className="mt-2 text-sm text-gray-500">
-                Due: {suggestion.dueDate.toLocaleDateString()}
+                Due: {suggestion.suggestedTime.toLocaleDateString()}
               </div>
             </div>
           ))}
