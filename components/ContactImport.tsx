@@ -164,26 +164,25 @@ const ContactImport: React.FC = () => {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) {
-      setError(createError(ImportErrorType.FILE_READ, 'No file selected'));
-      return;
-    }
+    if (!file) return;
 
     setFile(file);
     setError(null);
-    setIsProcessing(true);
     setCurrentStage('parsing');
 
     try {
       const content = await file.text();
-      const format = selectedFormat === 'auto' ? detectFileFormat(content) : selectedFormat;
-      const parsedContacts = parseFileContent(content, format);
-      setContacts(parsedContacts);
+      const format = detectFileFormat(content);
+      if (!format) {
+        throw new Error('Unsupported file format');
+      }
+
+      const contacts = parseFileContent(content, format);
+      setContacts(contacts);
       setActiveStep('review');
     } catch (err) {
-      setError(createError(ImportErrorType.FILE_PARSE, 'Failed to parse file', err));
-    } finally {
-      setIsProcessing(false);
+      setError(err instanceof Error ? err.message : 'Failed to process file');
+      setCurrentStage('error');
     }
   };
 

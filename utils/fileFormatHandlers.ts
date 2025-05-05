@@ -13,7 +13,13 @@ const csvHandler: FileFormatHandler = {
     
     return lines.slice(1).map(line => {
       const values = line.split(',').map(v => v.trim());
-      const contact: Contact = { name: '' };
+      const contact: Partial<Contact> = {
+        id: crypto.randomUUID(),
+        name: '',
+        email: '',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
       
       headers.forEach((header, index) => {
         const value = values[index];
@@ -35,15 +41,25 @@ const csvHandler: FileFormatHandler = {
           case 'title':
             contact.title = value;
             break;
-          default:
-            if (!contact.additionalFields) {
-              contact.additionalFields = {};
-            }
-            contact.additionalFields[header] = value;
+          case 'birthday':
+            contact.birthday = value;
+            break;
+          case 'relationshipstrength':
+            contact.relationshipStrength = parseFloat(value);
+            break;
+          case 'assignedto':
+            contact.assignedTo = value;
+            break;
+          case 'tags':
+            contact.tags = value.split(';').map(tag => tag.trim());
+            break;
+          case 'notes':
+            contact.notes = value;
+            break;
         }
       });
       
-      return contact;
+      return contact as Contact;
     });
   },
   
@@ -63,12 +79,19 @@ const jsonHandler: FileFormatHandler = {
       const data = JSON.parse(content);
       if (Array.isArray(data)) {
         return data.map(item => ({
+          id: crypto.randomUUID(),
           name: item.name || '',
-          email: item.email,
+          email: item.email || '',
           phone: item.phone,
           company: item.company,
           title: item.title,
-          additionalFields: item.additionalFields || {}
+          birthday: item.birthday,
+          relationshipStrength: item.relationshipStrength,
+          assignedTo: item.assignedTo,
+          tags: item.tags,
+          notes: item.notes,
+          createdAt: new Date(),
+          updatedAt: new Date()
         }));
       }
       return [];
@@ -97,11 +120,17 @@ const vCardHandler: FileFormatHandler = {
     for (const vCard of vCards) {
       if (!vCard.trim()) continue;
       
-      const contact: Contact = { name: '' };
-      const lines = vCard.split('\n');
+      const contact: Partial<Contact> = {
+        id: crypto.randomUUID(),
+        name: '',
+        email: '',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
       
+      const lines = vCard.split('\n');
       for (const line of lines) {
-        const [key, value] = line.split(':').map(s => s.trim());
+        const [key, value] = line.split(':');
         if (!key || !value) continue;
         
         switch (key.toUpperCase()) {
@@ -120,17 +149,16 @@ const vCardHandler: FileFormatHandler = {
           case 'TITLE':
             contact.title = value;
             break;
-          default:
-            if (!contact.additionalFields) {
-              contact.additionalFields = {};
-            }
-            contact.additionalFields[key] = value;
+          case 'BDAY':
+            contact.birthday = value;
+            break;
+          case 'NOTE':
+            contact.notes = value;
+            break;
         }
       }
       
-      if (contact.name) {
-        contacts.push(contact);
-      }
+      contacts.push(contact as Contact);
     }
     
     return contacts;
@@ -142,19 +170,16 @@ const vCardHandler: FileFormatHandler = {
 };
 
 // File format detection
-export const detectFileFormat = (file: File): string | null => {
-  const fileName = file.name.toLowerCase();
-  
-  if (fileName.endsWith('.csv')) return 'csv';
-  if (fileName.endsWith('.json')) return 'json';
-  if (fileName.endsWith('.vcf') || fileName.endsWith('.vcard')) return 'vcard';
-  
+export const detectFileFormat = (content: string): 'csv' | 'json' | 'vcard' | null => {
+  if (csvHandler.validate(content)) return 'csv';
+  if (jsonHandler.validate(content)) return 'json';
+  if (vCardHandler.validate(content)) return 'vcard';
   return null;
 };
 
 // Get appropriate handler
 export const getFileHandler = (format: string): FileFormatHandler | null => {
-  switch (format.toLowerCase()) {
+  switch (format) {
     case 'csv':
       return csvHandler;
     case 'json':
@@ -167,25 +192,19 @@ export const getFileHandler = (format: string): FileFormatHandler | null => {
 };
 
 // Parse file content
-export const parseFileContent = async (
-  file: File,
+export const parseFileContent = (
+  content: string,
   format?: string
-): Promise<Contact[]> => {
-  const content = await file.text();
-  const detectedFormat = format || detectFileFormat(file);
-  
+): Contact[] => {
+  const detectedFormat = format || detectFileFormat(content);
   if (!detectedFormat) {
-    throw new Error('Unsupported file format');
+    throw new Error('Could not detect file format');
   }
-  
+
   const handler = getFileHandler(detectedFormat);
   if (!handler) {
-    throw new Error('No handler found for the file format');
+    throw new Error(`No handler found for format: ${detectedFormat}`);
   }
-  
-  if (!handler.validate(content)) {
-    throw new Error('Invalid file format or content');
-  }
-  
+
   return handler.parse(content);
 }; 
