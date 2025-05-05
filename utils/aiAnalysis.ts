@@ -160,7 +160,7 @@ export function calculatePriorityScore(
   // Recent interaction score
   const recentInteractions = interactions.filter(i => {
     const hoursSinceInteraction = Math.ceil(
-      (Date.now() - i.timestamp.getTime()) / (1000 * 60 * 60)
+      (Date.now() - new Date(i.timestamp).getTime()) / (1000 * 60 * 60)
     );
     return hoursSinceInteraction <= 24;
   });
@@ -185,7 +185,7 @@ export function calculatePriorityScore(
 
   // Time decay factor
   const lastInteraction = interactions.length > 0
-    ? new Date(Math.max(...interactions.map(i => i.timestamp.getTime())))
+    ? new Date(Math.max(...interactions.map(i => new Date(i.timestamp).getTime())))
     : new Date(0);
 
   const daysSinceLastInteraction = Math.ceil(
@@ -208,7 +208,7 @@ export function analyzeInteractionSentiment(interaction: Interaction): number {
     negative: ['disappointed', 'unhappy', 'frustrated', 'concerned', 'issue', 'problem']
   };
 
-  const text = `${interaction.summary} ${interaction.notes || ''}`.toLowerCase();
+  const text = `${interaction.summary || ''}`.toLowerCase();
   
   let sentiment = 0;
   
@@ -232,7 +232,7 @@ export function generateFollowUpSuggestions(
 
   // Add time-based suggestions
   const hoursSinceInteraction = Math.ceil(
-    (Date.now() - interaction.timestamp.getTime()) / (1000 * 60 * 60)
+    (Date.now() - new Date(interaction.timestamp).getTime()) / (1000 * 60 * 60)
   );
 
   if (hoursSinceInteraction > 24) {
@@ -248,7 +248,7 @@ export function generateFollowUpSuggestions(
   }
 
   // Add priority-based suggestions
-  if (interaction.priority === 'high') {
+  if (interaction.metadata && interaction.metadata.priority === 'high') {
     suggestions.push('Schedule an immediate follow-up meeting');
   }
 
