@@ -61,7 +61,8 @@ export default function ActionItems({ userId }: ActionItemsProps) {
               dueDate: new Date(today.getFullYear(), birthday.getMonth(), birthday.getDate()),
               contactId: contact.id,
               contactName: contact.name,
-              status: 'pending'
+              status: 'pending',
+              completed: false
             });
           }
         }
@@ -86,7 +87,8 @@ export default function ActionItems({ userId }: ActionItemsProps) {
               dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
               contactId: contact.id,
               contactName: contact.name,
-              status: 'pending'
+              status: 'pending',
+              completed: false
             });
           }
         }
