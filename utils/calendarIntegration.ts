@@ -19,7 +19,7 @@ export async function createCalendarEvent(
   try {
     const event: CalendarEvent = {
       id: '', // Will be set by the calendar service
-      title: `Follow-up with ${suggestion.contact.id}`,
+      title: `Follow-up with ${suggestion.contactId}`,
       startTime: suggestion.suggestedTime,
       endTime: new Date(suggestion.suggestedTime.getTime() + 30 * 60 * 1000), // 30 minutes
       description: `Follow-up reason: ${suggestion.reason}\nType: ${suggestion.type}\nPriority: ${suggestion.priority}`,

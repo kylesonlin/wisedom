@@ -17,6 +17,8 @@ export const DEFAULT_PRIORITY_FACTORS: PriorityFactors = {
   urgencyWeight: 0.2
 };
 
+export type { FollowUpSuggestion };
+
 // Calculate priority score based on various factors
 export function calculatePriorityScore(
   contact: Contact,
