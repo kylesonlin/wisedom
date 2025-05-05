@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import SidePanel from './SidePanel';
 import { useRouter } from 'next/router';
