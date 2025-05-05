@@ -1,23 +1,18 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import SidePanel from './SidePanel';
-import { useRouter } from 'next/router';
-import { createClient, User } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
+import { getSupabaseClient } from '../utils/supabase';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = getSupabaseClient();
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [sideOpen, setSideOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) router.replace('/login');
-      else setUser(data.user);
     });
   }, [router]);
 
@@ -38,18 +33,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           <span className="font-bold text-xl tracking-tight text-primary">RelationshipOS</span>
         </div>
         <div className="flex items-center space-x-4">
-          {user ? (
-            <>
-              {user.user_metadata?.avatar_url ? (
-                <img src={user.user_metadata.avatar_url} alt="avatar" className="w-8 h-8 rounded-full" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-200" />
-              )}
-              <span className="text-sm font-medium text-gray-700">{user.user_metadata?.name || user.email}</span>
-            </>
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-200" />
-          )}
+          <div className="w-8 h-8 rounded-full bg-gray-200" />
         </div>
       </header>
       {/* Side Panel */}

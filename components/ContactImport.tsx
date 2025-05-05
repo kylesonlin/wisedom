@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '../utils/supabase';
 import { Contact, FilterGroupOperation, BatchOperation, ImportOperation } from '../types/contact';
 import { parseFileContent, detectFileFormat } from '../utils/fileFormatHandlers';
 import { BatchProcessingService } from '../services/batchProcessingService';
@@ -30,10 +30,7 @@ import { ImportErrorType } from '../utils/errorHandling';
 // Validate environment variables on component mount
 validateEnvVars();
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = getSupabaseClient();
 
 type ProcessingStage = 'parsing' | 'normalizing' | 'deduplicating' | 'saving';
 
