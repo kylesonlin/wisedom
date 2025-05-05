@@ -59,7 +59,7 @@ export default function AIActionSuggestions({
     }
 
     // Relationship building suggestions
-    if (interactionAnalysis.relationshipStrength < 0.5) {
+    if (interactionAnalysis && 'relationshipStrength' in interactionAnalysis && (interactionAnalysis.relationshipStrength as number) < 0.5) {
       suggestions.push({
         type: 'relationship',
         title: 'Relationship Building Opportunity',

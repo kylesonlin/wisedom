@@ -102,7 +102,7 @@ export default function ScheduledFollowUps() {
     newTime?: Date
   ) {
     try {
-      await updateFollowUpStatus(followUp.contactId, status, newTime);
+      await updateFollowUpStatus(followUp.contact.id, status, newTime);
       await loadScheduledFollowUps(); // Refresh the list
     } catch (error) {
       console.error('Error updating follow-up status:', error);
@@ -116,7 +116,7 @@ export default function ScheduledFollowUps() {
 
   function handleDateSelect(newDate: Date) {
     if (selectedFollowUp) {
-      handleStatusUpdate(selectedFollowUp.contactId, selectedFollowUp, 'rescheduled', newDate);
+      handleStatusUpdate(selectedFollowUp.contact.id, selectedFollowUp, 'rescheduled', newDate);
     }
     setShowDatePicker(false);
     setSelectedFollowUp(null);

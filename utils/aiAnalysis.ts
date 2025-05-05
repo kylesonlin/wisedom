@@ -19,7 +19,6 @@ export interface InteractionAnalysis {
   overallSentiment: number;
   keyPhrases: string[];
   actionItems: ActionItem[];
-  relationshipStrength: number;
 }
 
 // Canonical FollowUpSuggestion type for the entire app
@@ -55,8 +54,7 @@ export async function analyzeInteraction(interaction: Interaction): Promise<Inte
         description: 'Schedule next meeting',
         completed: false
       }
-    ],
-    relationshipStrength: 0.7
+    ]
   };
 }
 
@@ -151,11 +149,6 @@ export function calculatePriorityScore(
   updates: ContactUpdate[]
 ): number {
   let score = 0;
-
-  // Base score from relationship strength
-  if (contact.relationshipStrength) {
-    score += contact.relationshipStrength * 20;
-  }
 
   // Recent interaction score
   const recentInteractions = interactions.filter(i => {

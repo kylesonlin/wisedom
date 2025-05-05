@@ -11,6 +11,8 @@ export interface Contact {
   importance?: number;
   urgency?: number;
   assignedTo?: string;
+  relationshipStrength?: number;
+  tags?: string[];
   additionalFields?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;

@@ -8,7 +8,10 @@ export interface FilterOptions {
   priorityLevels?: ('high' | 'medium' | 'low')[];
   interactionTypes?: ('email' | 'call' | 'meeting' | 'note')[];
   sentimentRange?: { min: number; max: number };
-  relationshipStrength?: { min: number; max: number };
+  relationshipStrength?: {
+    min: number;
+    max: number;
+  };
   hasPendingActions?: boolean;
   hasScheduledFollowUps?: boolean;
   company?: string;
@@ -89,14 +92,14 @@ export function filterContacts(
     }
 
     // Relationship strength filter
-    if (filterOptions.relationshipStrength) {
+    if (filterOptions.relationshipStrength && 'min' in filterOptions.relationshipStrength && 'max' in filterOptions.relationshipStrength) {
       const analysis = interactionAnalyses[contact.id];
       if (!analysis) return false;
-      if (
-        analysis.relationshipStrength < filterOptions.relationshipStrength.min ||
-        analysis.relationshipStrength > filterOptions.relationshipStrength.max
-      ) {
-        return false;
+      if (analysis && 'relationshipStrength' in analysis) {
+        if ((analysis.relationshipStrength as number) < filterOptions.relationshipStrength.min ||
+            (analysis.relationshipStrength as number) > filterOptions.relationshipStrength.max) {
+          return false;
+        }
       }
     }
 
@@ -172,8 +175,8 @@ export function sortContacts(
         break;
 
       case 'relationshipStrength':
-        const strengthA = interactionAnalyses[a.id]?.relationshipStrength || 0;
-        const strengthB = interactionAnalyses[b.id]?.relationshipStrength || 0;
+        const strengthA = interactionAnalyses[a.id] && (interactionAnalyses[a.id] as any).relationshipStrength !== undefined ? (interactionAnalyses[a.id] as any).relationshipStrength as number : 0;
+        const strengthB = interactionAnalyses[b.id] && (interactionAnalyses[b.id] as any).relationshipStrength !== undefined ? (interactionAnalyses[b.id] as any).relationshipStrength as number : 0;
         comparison = strengthA - strengthB;
         break;
     }
@@ -238,8 +241,8 @@ export function getFilterStats(
 
     // Calculate average relationship strength
     const analysis = interactionAnalyses[contact.id];
-    if (analysis) {
-      totalRelationshipStrength += analysis.relationshipStrength;
+    if (analysis && 'relationshipStrength' in analysis) {
+      totalRelationshipStrength += (analysis.relationshipStrength as number);
       count++;
     }
   });

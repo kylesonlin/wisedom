@@ -13,10 +13,10 @@ export default function ContactPrioritization() {
   const [error, setError] = useState<string | null>(null);
   const [timeframe, setTimeframe] = useState<'day' | 'week' | 'month'>('week');
   const [priorityFactors, setPriorityFactors] = useState({
-    recency: 0.2,
-    engagement: 0.3,
-    importance: 0.3,
-    urgency: 0.2
+    recencyWeight: 0.2,
+    engagementWeight: 0.3,
+    importanceWeight: 0.3,
+    urgencyWeight: 0.2
   });
 
   useEffect(() => {
@@ -25,10 +25,15 @@ export default function ContactPrioritization() {
 
   useEffect(() => {
     if (contacts.length > 0 && interactions.length > 0) {
-      const newSuggestions = generateFollowUpSuggestions(contacts, interactions, timeframe);
-      setSuggestions(newSuggestions);
+      // For each contact, generate suggestions
+      const allSuggestions = contacts.flatMap(contact => {
+        const contactInteractions = interactions.filter(i => i.contact_id === contact.id);
+        const score = calculatePriorityScore(contact, contactInteractions, priorityFactors);
+        return generateFollowUpSuggestions(contact, contactInteractions, score);
+      });
+      setSuggestions(allSuggestions);
     }
-  }, [contacts, interactions, timeframe, priorityFactors]);
+  }, [contacts, interactions, priorityFactors]);
 
   const loadData = async () => {
     try {

@@ -25,7 +25,7 @@ export async function scheduleFollowUp(suggestion: FollowUpSuggestion): Promise<
     const { error } = await supabase
       .from('interactions')
       .insert({
-        contact_id: suggestion.contactId,
+        contact_id: suggestion.contact.id,
         type: suggestion.type,
         timestamp: suggestion.suggestedTime.toISOString(),
         summary: `Scheduled follow-up: ${suggestion.reason}`,
@@ -52,7 +52,7 @@ export async function dismissSuggestion(suggestion: FollowUpSuggestion): Promise
     const { error } = await supabase
       .from('interactions')
       .insert({
-        contact_id: suggestion.contactId,
+        contact_id: suggestion.contact.id,
         type: 'note',
         timestamp: new Date().toISOString(),
         summary: `Dismissed follow-up suggestion: ${suggestion.reason}`,
@@ -82,13 +82,13 @@ export async function getScheduledFollowUps(contactId: string): Promise<FollowUp
     if (error) throw error;
 
     return (data || []).map(interaction => ({
-      contactId: interaction.contact_id,
+      id: interaction.id,
+      contact: { id: interaction.contact_id } as any, // TODO: fetch full contact if needed
       type: interaction.type as 'email' | 'call' | 'meeting',
       priority: 'medium', // Default priority for scheduled follow-ups
       reason: interaction.summary || 'Scheduled follow-up',
       suggestedTime: new Date(interaction.timestamp),
-      confidence: 1, // Scheduled follow-ups have 100% confidence
-      actionItems: []
+      confidence: 1 // Scheduled follow-ups have 100% confidence
     }));
 
   } catch (error) {

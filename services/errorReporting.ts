@@ -170,14 +170,11 @@ export class ErrorReportingService {
 
       const dailyTrends: Record<string, number> = {};
       const typeDistribution: Record<ImportErrorType, number> = {
-        [ImportErrorType.FILE_READ]: 0,
-        [ImportErrorType.FILE_PARSE]: 0,
-        [ImportErrorType.FILE_FORMAT]: 0,
-        [ImportErrorType.NORMALIZATION]: 0,
-        [ImportErrorType.DUPLICATE_DETECTION]: 0,
-        [ImportErrorType.DATABASE]: 0,
-        [ImportErrorType.VALIDATION]: 0,
-        [ImportErrorType.UNKNOWN]: 0
+        'VALIDATION_ERROR': 0,
+        'API_ERROR': 0,
+        'DATABASE_ERROR': 0,
+        'NETWORK_ERROR': 0,
+        'UNKNOWN_ERROR': 0
       };
       let recoveredCount = 0;
 
@@ -187,7 +184,7 @@ export class ErrorReportingService {
         dailyTrends[date] = (dailyTrends[date] || 0) + 1;
 
         // Calculate type distribution
-        typeDistribution[error.type] = (typeDistribution[error.type] || 0) + 1;
+        typeDistribution[error.type as ImportErrorType] = (typeDistribution[error.type as ImportErrorType] || 0) + 1;
 
         // Count recovered errors
         if (error.resolved_at) recoveredCount++;

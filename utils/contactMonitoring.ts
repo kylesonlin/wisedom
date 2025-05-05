@@ -1,5 +1,5 @@
 import { Contact } from '../types/contact';
-import { Interaction } from '../types/interaction';
+import { Interaction } from '../types/contact';
 import { ActionItem } from './projectAnalytics';
 import { calculatePriorityScore } from './aiAnalysis';
 
@@ -66,12 +66,12 @@ export function monitorContactUpdates(
 
     if (hoursSinceInteraction <= 24) {
       updates.push({
-        contactId: interaction.contactId,
+        contactId: interaction.contact_id,
         type: 'interaction',
         timestamp: interaction.timestamp,
-        priority: interaction.priority,
+        priority: 'medium',
         details: `New ${interaction.type}: ${interaction.summary}`,
-        actionNeeded: interaction.followUpNeeded,
+        actionNeeded: false,
       });
     }
   });
@@ -85,7 +85,7 @@ export function calculateContactPriorities(
   updates: ContactUpdate[]
 ): ContactPriority[] {
   return contacts.map(contact => {
-    const contactInteractions = interactions.filter(i => i.contactId === contact.id);
+    const contactInteractions = interactions.filter(i => i.contact_id === contact.id);
     const contactUpdates = updates.filter(u => u.contactId === contact.id);
     
     const lastInteraction = contactInteractions.length > 0
@@ -115,7 +115,7 @@ export function calculateContactPriorities(
       lastInteraction,
       interactionFrequency,
       sentimentScore: averageSentiment,
-      relationshipStrength: contact.relationshipStrength || 0,
+      relationshipStrength: 0,
       pendingActions,
       upcomingEvents,
     };

@@ -109,8 +109,8 @@ export default function ContactHistory({ contactId }: ContactHistoryProps) {
               {interaction.sentiment !== null && (
                 <div className="mt-2">
                   <span className="text-sm text-gray-500">Sentiment: </span>
-                  <span className={interaction.sentiment > 0 ? 'text-green-500' : 'text-red-500'}>
-                    {interaction.sentiment > 0 ? 'Positive' : 'Negative'}
+                  <span className={(interaction.sentiment ?? 0) > 0 ? 'text-green-500' : 'text-red-500'}>
+                    {(interaction.sentiment ?? 0) > 0 ? 'Positive' : 'Negative'}
                   </span>
                 </div>
               )}

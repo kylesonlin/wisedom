@@ -27,8 +27,8 @@ export default function DailyUpdates({ contacts, interactions }: DailyUpdatesPro
   useEffect(() => {
     async function loadUpdates() {
       try {
-        const newUpdates = monitorContactUpdates(contacts, interactions);
-        const newPriorities = calculateContactPriorities(contacts, interactions, newUpdates);
+        const newUpdates = monitorContactUpdates(contacts, interactions as unknown as import('../types/contact').Interaction[]);
+        const newPriorities = calculateContactPriorities(contacts, interactions as unknown as import('../types/contact').Interaction[], newUpdates);
         const newActionItems = generatePriorityActionItems(contacts, newPriorities, newUpdates);
 
         setUpdates(newUpdates);

@@ -6,7 +6,6 @@ import { BatchProcessingService } from '../services/batchProcessingService';
 import { NormalizationService } from '../services/normalizationService';
 import {
   ImportError,
-  ImportErrorType,
   createError,
   formatErrorForDisplay,
   isRecoverableError,
@@ -24,6 +23,7 @@ import {
   cleanupResources,
   isPotentialDuplicate
 } from '../utils/safetyUtils';
+import { ImportErrorType } from '../utils/errorHandling';
 
 // Validate environment variables on component mount
 validateEnvVars();
@@ -64,6 +64,55 @@ interface BatchProcessingResult {
   };
 }
 
+type CustomFilter = {
+  field: keyof Contact;
+  operator:
+    | 'contains'
+    | 'equals'
+    | 'startsWith'
+    | 'endsWith'
+    | 'regex'
+    | 'custom'
+    | 'greaterThan'
+    | 'lessThan'
+    | 'between'
+    | 'dateBefore'
+    | 'dateAfter'
+    | 'dateBetween'
+    | 'matchesPattern'
+    | 'customValidation';
+  value: string;
+  value2?: string;
+  customFunction?: string;
+  isRegex?: boolean;
+  caseSensitive?: boolean;
+  validationPattern?: string;
+  validationMessage?: string;
+  id?: string; // for filter group removal
+};
+
+type FilterGroup = {
+  id: string;
+  filters: CustomFilter[];
+  combination: 'AND' | 'OR';
+  parentGroupId?: string;
+  level: number;
+};
+
+type FilterOptions = {
+  searchTerm: string;
+  field: 'all' | keyof Contact;
+  hasChanges: 'all' | 'changed' | 'unchanged';
+  normalizationType: 'all' | 'email' | 'phone' | 'name' | 'company' | 'title';
+  dateRange: {
+    start: Date | null;
+    end: Date | null;
+  };
+  customFilters: CustomFilter[];
+  filterCombination: 'AND' | 'OR';
+  filterGroups: FilterGroup[];
+};
+
 const ContactImport: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -88,34 +137,15 @@ const ContactImport: React.FC = () => {
   }>({ totalBatches: 0, processedBatches: 0, failedBatches: 0, duplicatesPerBatch: {} });
   const [previewContacts, setPreviewContacts] = useState<Contact[]>([]);
   const [showPreview, setShowPreview] = useState(false);
-  const [filterOptions, setFilterOptions] = useState({
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     searchTerm: '',
-    field: 'all' as 'all' | keyof Contact,
-    hasChanges: 'all' as 'all' | 'changed' | 'unchanged',
-    normalizationType: 'all' as 'all' | 'email' | 'phone' | 'name' | 'company' | 'title',
-    dateRange: {
-      start: null as Date | null,
-      end: null as Date | null
-    },
-    customFilters: [] as Array<{
-      field: keyof Contact;
-      operator: 'contains' | 'equals' | 'startsWith' | 'endsWith' | 'regex' | 'custom' | 'greaterThan' | 'lessThan' | 'between' | 'dateBefore' | 'dateAfter' | 'dateBetween' | 'matchesPattern' | 'customValidation';
-      value: string;
-      value2?: string;
-      customFunction?: string;
-      isRegex?: boolean;
-      caseSensitive?: boolean;
-      validationPattern?: string;
-      validationMessage?: string;
-    }>,
-    filterCombination: 'AND' as 'AND' | 'OR',
-    filterGroups: [] as Array<{
-      id: string;
-      filters: typeof filterOptions.customFilters;
-      combination: 'AND' | 'OR';
-      parentGroupId?: string;
-      level: number;
-    }>
+    field: 'all',
+    hasChanges: 'all',
+    normalizationType: 'all',
+    dateRange: { start: null, end: null },
+    customFilters: [],
+    filterCombination: 'AND',
+    filterGroups: []
   });
   const [sortOptions, setSortOptions] = useState({
     field: 'name' as keyof Contact,
@@ -203,7 +233,7 @@ const ContactImport: React.FC = () => {
       setContacts(contacts);
       setActiveStep('review');
     } catch (err) {
-      setError(createError(ImportErrorType.FILE_PARSE, 'Failed to process file', err));
+      setError(createError('VALIDATION_ERROR', 'Failed to process file', err));
     }
   };
 
@@ -254,7 +284,7 @@ const ContactImport: React.FC = () => {
       setBatchStats(result.batchStats);
       setActiveStep('save');
     } catch (err) {
-      setError(createError(ImportErrorType.UNKNOWN, 'Failed to process contacts', err));
+      setError(createError('UNKNOWN_ERROR', 'Failed to process contacts', err));
     } finally {
       setIsProcessing(false);
     }
@@ -448,7 +478,7 @@ const ContactImport: React.FC = () => {
       setNormalizationStats({ emailsNormalized: 0, phonesNormalized: 0, namesNormalized: 0 });
       setBatchStats({ totalBatches: 0, processedBatches: 0, failedBatches: 0, duplicatesPerBatch: {} });
     } catch (err) {
-      setError(createError(ImportErrorType.DATABASE, 'Failed to save contacts', err));
+      setError(createError('DATABASE_ERROR', 'Failed to save contacts', err));
       
       // Enhanced error logging
       const { error: logError } = await supabase
@@ -732,10 +762,10 @@ const ContactImport: React.FC = () => {
 
     // Apply field filter
     if (filterOptions.field !== 'all') {
-      filtered = filtered.filter(contact => 
-        contact[filterOptions.field] !== undefined && 
-        contact[filterOptions.field] !== null
-      );
+      const field = filterOptions.field as keyof Contact;
+      filtered = filtered.filter(contact => {
+        return contact[field] !== undefined && contact[field] !== null;
+      });
     }
 
     // Apply changes filter
@@ -754,10 +784,11 @@ const ContactImport: React.FC = () => {
 
     // Apply normalization type filter
     if (filterOptions.normalizationType !== 'all') {
+      const field = filterOptions.normalizationType as keyof Contact;
       filtered = filtered.filter(contact => {
         const original = contacts.find(c => c.id === contact.id);
         if (!original) return false;
-        return contact[filterOptions.normalizationType] !== original[filterOptions.normalizationType];
+        return contact[field] !== original[field];
       });
     }
 
@@ -772,7 +803,7 @@ const ContactImport: React.FC = () => {
     }
 
     // Apply custom filters
-    const applyCustomFilter = (contact: Contact, filter: typeof filterOptions.customFilters[0]) => {
+    const applyCustomFilter = (contact: Contact, filter: CustomFilter) => {
       const value = contact[filter.field]?.toString() || '';
       const filterValue = filter.value;
       const filterValue2 = filter.value2;
@@ -842,28 +873,28 @@ const ContactImport: React.FC = () => {
     // Apply filter groups
     if (filterOptions.filterGroups.length > 0) {
       filtered = filtered.filter(contact => {
-        return filterOptions.filterGroups.every(group => {
+        return filterOptions.filterGroups.every((group: FilterGroup) => {
           if (group.filters.length === 0) return true;
           
-          const groupResult = group.filters.map(filter => applyCustomFilter(contact, filter));
+          const groupResult = group.filters.map((filter: CustomFilter) => applyCustomFilter(contact, filter));
           return group.combination === 'AND' 
-            ? groupResult.every(result => result)
-            : groupResult.some(result => result);
+            ? groupResult.every((result: boolean) => result)
+            : groupResult.some((result: boolean) => result);
         });
       });
     }
 
     // Apply main custom filters
     if (filterOptions.customFilters.length > 0) {
-      const filterResults = filterOptions.customFilters.map(filter => 
-        filtered.map(contact => applyCustomFilter(contact, filter))
+      const filterResults = filterOptions.customFilters.map((filter: CustomFilter) =>
+        filtered.map((contact: Contact) => applyCustomFilter(contact, filter))
       );
 
       filtered = filtered.filter((_, index) => {
-        const results = filterResults.map(result => result[index]);
+        const results = filterResults.map((result: boolean[]) => result[index]);
         return filterOptions.filterCombination === 'AND'
-          ? results.every(result => result)
-          : results.some(result => result);
+          ? results.every((result: boolean) => result)
+          : results.some((result: boolean) => result);
       });
     }
 
@@ -1399,11 +1430,11 @@ const ContactImport: React.FC = () => {
                     </button>
                   </div>
                   <div className="custom-filters">
-                    {filterOptions.customFilters.map((filter, index) => (
+                    {filterOptions.customFilters.map((filter: CustomFilter, index: number) => (
                       <div key={index} className="custom-filter">
                         <select
                           value={filter.field}
-                          onChange={(e) => handleFilterChange('customFilters', prev => prev.map((f, i) => i === index ? { ...f, field: e.target.value as keyof Contact } : f))}
+                          onChange={(e) => handleFilterChange('customFilters', (prev: CustomFilter[]) => prev.map((f: CustomFilter, i: number) => i === index ? { ...f, field: e.target.value as keyof Contact } : f))}
                         >
                           <option value="name">Name</option>
                           <option value="email">Email</option>
@@ -1413,7 +1444,7 @@ const ContactImport: React.FC = () => {
                         </select>
                         <select
                           value={filter.operator}
-                          onChange={(e) => handleFilterChange('customFilters', prev => prev.map((f, i) => i === index ? { ...f, operator: e.target.value as typeof filter.operator } : f))}
+                          onChange={(e) => handleFilterChange('customFilters', (prev: CustomFilter[]) => prev.map((f: CustomFilter, i: number) => i === index ? { ...f, operator: e.target.value as CustomFilter['operator'] } : f))}
                         >
                           <option value="contains">Contains</option>
                           <option value="equals">Equals</option>
@@ -1425,10 +1456,10 @@ const ContactImport: React.FC = () => {
                         <input
                           type="text"
                           value={filter.value}
-                          onChange={(e) => handleFilterChange('customFilters', prev => prev.map((f, i) => i === index ? { ...f, value: e.target.value } : f))}
+                          onChange={(e) => handleFilterChange('customFilters', (prev: CustomFilter[]) => prev.map((f: CustomFilter, i: number) => i === index ? { ...f, value: e.target.value } : f))}
                           placeholder="Value"
                         />
-                        <button onClick={() => handleFilterGroupRemove(filter.id)}>
+                        <button onClick={() => handleFilterGroupRemove(filter.id || '')}>
                           Remove
                         </button>
                       </div>

@@ -42,7 +42,7 @@ const csvHandler: FileFormatHandler = {
             contact.title = value;
             break;
           case 'birthday':
-            contact.birthday = value;
+            contact.birthday = new Date(value);
             break;
           case 'relationshipstrength':
             contact.relationshipStrength = parseFloat(value);
@@ -150,7 +150,7 @@ const vCardHandler: FileFormatHandler = {
             contact.title = value;
             break;
           case 'BDAY':
-            contact.birthday = value;
+            contact.birthday = new Date(value);
             break;
           case 'NOTE':
             contact.notes = value;

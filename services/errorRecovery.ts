@@ -25,7 +25,7 @@ export class ErrorRecoveryService {
   private initializeStrategies(): void {
     this.strategies = [
       {
-        type: ImportErrorType.FILE_PARSE,
+        type: 'VALIDATION_ERROR',
         canRecover: (error) => {
           const context = error.context;
           return context?.fileFormat !== undefined && 
@@ -41,7 +41,7 @@ export class ErrorRecoveryService {
         }
       },
       {
-        type: ImportErrorType.NORMALIZATION,
+        type: 'UNKNOWN_ERROR',
         canRecover: (error) => {
           const contact = error.context?.contact;
           return contact !== undefined;
@@ -56,7 +56,7 @@ export class ErrorRecoveryService {
         }
       },
       {
-        type: ImportErrorType.DUPLICATE_DETECTION,
+        type: 'UNKNOWN_ERROR',
         canRecover: (error) => {
           const batchIndex = error.context?.batchIndex;
           return batchIndex !== undefined;
@@ -71,7 +71,7 @@ export class ErrorRecoveryService {
         }
       },
       {
-        type: ImportErrorType.DATABASE,
+        type: 'DATABASE_ERROR',
         canRecover: (error) => {
           return error.details?.code === 'CONNECTION_ERROR';
         },

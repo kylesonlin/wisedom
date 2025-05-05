@@ -77,9 +77,9 @@ export const findPotentialDuplicates = (
 ): Map<string, Contact[]> => {
   const normalizedContacts = contacts.map(contact => ({
     ...contact,
-    normalizedEmail: normalizeEmail(contact.email),
-    normalizedPhone: normalizePhone(contact.phone),
-    normalizedName: normalizeName(contact.name)
+    normalizedEmail: normalizeEmail(contact.email ? contact.email : ''),
+    normalizedPhone: normalizePhone(contact.phone ? contact.phone : ''),
+    normalizedName: normalizeName(contact.name ? contact.name : '')
   }));
 
   const duplicates = new Map<string, Contact[]>();
@@ -124,7 +124,7 @@ export const findPotentialDuplicates = (
 
   // Filter out non-duplicates (groups with only one contact)
   const filteredDuplicates = new Map<string, Contact[]>();
-  for (const [key, group] of duplicates.entries()) {
+  for (const [key, group] of Array.from(duplicates.entries())) {
     if (group.length > 1) {
       filteredDuplicates.set(key, group);
     }
@@ -183,16 +183,22 @@ export const mergeDuplicateContacts = (duplicates: Contact[]): Contact => {
 export const normalizeContact = (contact: Contact): NormalizedContact => {
   return {
     ...contact,
-    email: normalizeEmail(contact.email),
-    phone: normalizePhone(contact.phone),
-    name: normalizeName(contact.name),
-    normalizedEmail: normalizeEmail(contact.email),
-    normalizedPhone: normalizePhone(contact.phone),
-    normalizedName: normalizeName(contact.name)
+    email: normalizeEmail(contact.email ? contact.email : ''),
+    phone: normalizePhone(contact.phone ? contact.phone : ''),
+    name: normalizeName(contact.name ? contact.name : ''),
+    normalizedEmail: normalizeEmail(contact.email ? contact.email : ''),
+    normalizedPhone: normalizePhone(contact.phone ? contact.phone : ''),
+    normalizedName: normalizeName(contact.name ? contact.name : '')
   };
 };
 
 // Function to normalize a batch of contacts
 export const normalizeContacts = (contacts: Contact[]): NormalizedContact[] => {
   return contacts.map(normalizeContact);
-}; 
+};
+
+// ... existing code ...
+      // if (analysis && 'relationshipStrength' in analysis) {
+      //   normalizedAnalysis.relationshipStrength = (analysis.relationshipStrength as number);
+      // }
+// ... existing code ... 

@@ -61,14 +61,14 @@ export default function PriorityVisualization({
                   Relationship Strength
                 </span>
                 <span className="text-sm text-gray-500">
-                  {Math.round(interactionAnalysis.relationshipStrength * 100)}%
+                  {interactionAnalysis && 'relationshipStrength' in interactionAnalysis ? Math.round((interactionAnalysis.relationshipStrength as number) * 100) : 0}%
                 </span>
               </div>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-blue-500"
                   style={{
-                    width: `${interactionAnalysis.relationshipStrength * 100}%`
+                    width: interactionAnalysis && 'relationshipStrength' in interactionAnalysis ? `${(interactionAnalysis.relationshipStrength as number) * 100}%` : '0%'
                   }}
                 />
               </div>
@@ -114,7 +114,7 @@ export default function PriorityVisualization({
                     key={index}
                     className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs"
                   >
-                    {topic.topic}
+                    {topic.topics[0] || 'N/A'}
                   </span>
                 ))}
               </div>

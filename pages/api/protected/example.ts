@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../utils/supabase';
+import { getSupabaseClient } from '../../../utils/supabase';
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,6 +18,7 @@ export default async function handler(
   }
 
   try {
+    const supabase = getSupabaseClient();
     // Verify the token with Supabase
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
