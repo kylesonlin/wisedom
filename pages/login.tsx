@@ -11,14 +11,21 @@ export default function Login() {
   const router = useRouter();
 
   useEffect(() => {
-    // If already logged in, redirect to /app
+    // If already logged in, redirect to /import
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) router.replace('/app');
+      if (data.user) router.replace('/import');
     });
   }, [router]);
 
   const handleSignIn = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google' });
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: typeof window !== 'undefined' && window.location.origin
+          ? `${window.location.origin}/import`
+          : 'https://app.wisedom.ai/import',
+      },
+    });
   };
 
   return (
