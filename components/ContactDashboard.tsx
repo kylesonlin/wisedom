@@ -46,14 +46,39 @@ export default function ContactDashboard({ initialView }: ContactDashboardProps)
           .from('contacts')
           .select('*');
         if (contactsError) throw contactsError;
-        setContacts(contactsData || []);
+        setContacts(
+          (contactsData || []).map(c => ({
+            ...c,
+            createdAt: c.createdAt ? new Date(c.createdAt) : undefined,
+            updatedAt: c.updatedAt ? new Date(c.updatedAt) : undefined,
+            birthday: c.birthday ?? undefined,
+            phone: c.phone ?? undefined,
+            company: c.company ?? undefined,
+            title: c.title ?? undefined,
+            assignedTo: c.assignedTo ?? undefined,
+            notes: c.notes ?? undefined,
+            source: c.source ?? undefined,
+            additionalFields: c.additionalFields ?? undefined,
+          }))
+        );
 
         // Load interactions
         const { data: interactionsData, error: interactionsError } = await supabase
           .from('interactions')
           .select('*');
         if (interactionsError) throw interactionsError;
-        setInteractions(interactionsData || []);
+        setInteractions(
+          (interactionsData || []).map(i => ({
+            ...i,
+            timestamp: i.timestamp,
+            created_at: i.created_at ? new Date(i.created_at) : undefined,
+            updated_at: i.updated_at ? new Date(i.updated_at) : undefined,
+            summary: i.summary ?? undefined,
+            sentiment: i.sentiment ?? undefined,
+            topics: i.topics ?? undefined,
+            metadata: i.metadata ?? undefined,
+          }))
+        );
 
         // Calculate priority scores, interaction analyses, and follow-up suggestions
         const scores: Record<string, PriorityScore> = {};
