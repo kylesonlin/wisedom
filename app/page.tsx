@@ -1,14 +1,14 @@
 import React from 'react';
-import MainLayout from '../../components/MainLayout';
-import AIActionSuggestions from '../../components/widgets/AIActionSuggestions';
-import ActionItems from '../../components/widgets/ActionItems';
-import Birthdays from '../../components/widgets/Birthdays';
-import RelationshipStrength from '../../components/widgets/RelationshipStrength';
+import MainLayout from '../components/MainLayout';
+import AIActionSuggestions from '../components/widgets/AIActionSuggestions';
+import ActionItems from '../components/widgets/ActionItems';
+import Birthdays from '../components/widgets/Birthdays';
+import RelationshipStrength from '../components/widgets/RelationshipStrength';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export default async function Dashboard() {
-  const cookieStore = await cookies();
+export default async function Page() {
+  const cookieStore = cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
