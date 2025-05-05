@@ -12,6 +12,7 @@ export interface Contact {
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
+  source?: string;
 }
 
 export interface Interaction {
