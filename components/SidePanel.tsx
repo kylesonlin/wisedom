@@ -7,10 +7,10 @@ interface SidePanelProps {
 }
 
 const navLinks = [
-  { name: 'Dashboard', href: '/app' },
-  { name: 'Integrations', href: '/app/integrations' },
-  { name: 'Contacts', href: '/app/contacts' },
-  { name: 'Settings', href: '/app/settings' },
+  { name: 'Dashboard', href: '/' },
+  { name: 'Integrations', href: '/integrations' },
+  { name: 'Contacts', href: '/contacts' },
+  { name: 'Settings', href: '/settings' },
 ];
 
 export default function SidePanel({ open, setOpen }: SidePanelProps) {
