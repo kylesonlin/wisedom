@@ -139,7 +139,16 @@ export class ErrorReportingService {
       if (error) throw error;
 
       const dailyTrends: Record<string, number> = {};
-      const typeDistribution: Record<ImportErrorType, number> = {};
+      const typeDistribution: Record<ImportErrorType, number> = {
+        [ImportErrorType.FILE_READ]: 0,
+        [ImportErrorType.FILE_PARSE]: 0,
+        [ImportErrorType.FILE_FORMAT]: 0,
+        [ImportErrorType.NORMALIZATION]: 0,
+        [ImportErrorType.DUPLICATE_DETECTION]: 0,
+        [ImportErrorType.DATABASE]: 0,
+        [ImportErrorType.VALIDATION]: 0,
+        [ImportErrorType.UNKNOWN]: 0
+      };
       let recoveredCount = 0;
 
       data.forEach((error: any) => {
