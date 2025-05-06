@@ -101,13 +101,9 @@ export function getErrorResolutionSteps(error: ImportError): string[] {
       steps.push('Try importing again with corrected data');
       break;
       
-    case 'DATABASE_ERROR':
+    case 'PROCESSING_ERROR':
       steps.push('Check database connection');
       steps.push('Verify database permissions');
-      steps.push('Contact system administrator if issue persists');
-      break;
-      
-    case 'NETWORK_ERROR':
       steps.push('Check network connection');
       steps.push('Try the operation again');
       steps.push('Contact support if the issue persists');
