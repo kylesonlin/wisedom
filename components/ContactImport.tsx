@@ -8,11 +8,11 @@ import { BatchProcessingService } from '../services/batchProcessingService';
 import { NormalizationService } from '../services/normalizationService';
 import {
   ImportError,
+  ImportErrorType,
   createError,
   formatErrorForDisplay,
   isRecoverableError,
   getErrorResolutionSteps,
-  ImportErrorLogger
 } from '../utils/errorHandling';
 import { ErrorReportingService } from '../services/errorReporting';
 import { ErrorRecoveryService } from '../services/errorRecovery';
@@ -25,32 +25,32 @@ import {
   cleanupResources,
   isPotentialDuplicate
 } from '../utils/safetyUtils';
-import { ImportErrorType } from '../utils/errorHandling';
+import { BatchProcessor, ProcessingStage } from '../utils/batchProcessor';
+import { useDropzone } from 'react-dropzone';
+import { useContactStore } from '../store/contactStore';
+import { useToast } from '../hooks/useToast';
+import { normalizeContacts } from '../utils/contactNormalization';
+import { groupSimilarContacts } from '../utils/mlDuplicateDetection';
+import { SaveError } from '../utils/errorHandling';
 
 // Validate environment variables on component mount
 validateEnvVars();
 
 const supabase = getSupabaseClient();
 
-type ProcessingStage = 'parsing' | 'normalizing' | 'deduplicating' | 'saving';
-
 // Add new types for enhanced functionality
 type ConflictResolutionStrategy = 'merge' | 'skip' | 'keep_both' | 'custom';
 type MergeStrategy = 'prefer_new' | 'prefer_existing' | 'combine' | 'custom';
 type ImportAnalytics = {
   totalContacts: number;
+  processedContacts: number;
   duplicatesFound: number;
   conflictsDetected: number;
   mergedContacts: number;
   skippedContacts: number;
-  normalizationStats: {
-    emailsNormalized: number;
-    phonesNormalized: number;
-    namesNormalized: number;
-  };
-  processingTime: number;
   errorCount: number;
   warningCount: number;
+  processingTime: number;
 };
 
 interface BatchProcessingResult {
@@ -102,7 +102,7 @@ type FilterOptions = {
   searchTerm: string;
   field: 'all' | keyof Contact;
   hasChanges: 'all' | 'changed' | 'unchanged';
-  normalizationType: 'all' | 'email' | 'phone' | 'name' | 'company' | 'title';
+  normalizationType: 'all' | 'email' | 'phone' | 'firstName' | 'lastName' | 'company' | 'title';
   dateRange: {
     start: Date | null;
     end: Date | null;
@@ -112,17 +112,70 @@ type FilterOptions = {
   filterGroups: FilterGroup[];
 };
 
+// Add at the top of the component, after imports:
+const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+
+interface ImportStats {
+  total: number;
+  valid: number;
+  invalid: number;
+  duplicates: number;
+  normalized: number;
+}
+
+interface ImportState {
+  isImporting: boolean;
+  stage: ProcessingStage;
+  progress: number;
+  stats: ImportStats;
+  errors: ImportError[];
+  duplicates: Contact[][];
+  normalizedContacts: Contact[];
+}
+
+const initialState: ImportState = {
+  isImporting: false,
+  stage: 'idle',
+  progress: 0,
+  stats: {
+    total: 0,
+    valid: 0,
+    invalid: 0,
+    duplicates: 0,
+    normalized: 0
+  },
+  errors: [],
+  duplicates: [],
+  normalizedContacts: []
+};
+
 const ContactImport: React.FC = () => {
-  const [file, setFile] = useState<File | null>(null);
+  const [state, setState] = useState<ImportState>(initialState);
+  const { addContacts } = useContactStore();
+  const { showToast } = useToast();
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [similarityGroups, setSimilarityGroups] = useState<Contact[][]>([]);
-  const [error, setError] = useState<ImportError | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<ImportError | null>(null);
+  const [currentStage, setCurrentStage] = useState<ProcessingStage>('idle');
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [importAnalytics, setImportAnalytics] = useState<ImportAnalytics>({
+    totalContacts: 0,
+    processedContacts: 0,
+    duplicatesFound: 0,
+    conflictsDetected: 0,
+    mergedContacts: 0,
+    skippedContacts: 0,
+    errorCount: 0,
+    warningCount: 0,
+    processingTime: 0
+  });
+  const [similarityGroups, setSimilarityGroups] = useState<Contact[][]>([]);
   const [progress, setProgress] = useState(0);
   const [selectedFormat, setSelectedFormat] = useState<'auto' | 'csv' | 'json' | 'vcard'>('auto');
   const [showHelp, setShowHelp] = useState(false);
   const [activeStep, setActiveStep] = useState<'upload' | 'review' | 'save'>('upload');
-  const [currentStage, setCurrentStage] = useState<ProcessingStage>('parsing');
   const [normalizationStats, setNormalizationStats] = useState<{
     emailsNormalized: number;
     phonesNormalized: number;
@@ -147,7 +200,7 @@ const ContactImport: React.FC = () => {
     filterGroups: []
   });
   const [sortOptions, setSortOptions] = useState({
-    field: 'name' as keyof Contact,
+    field: 'firstName' as keyof Contact,
     direction: 'asc' as 'asc' | 'desc'
   });
   const [filterPresets, setFilterPresets] = useState<Array<{
@@ -165,7 +218,7 @@ const ContactImport: React.FC = () => {
     description: string;
   }>>([]);
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
-  const [bulkEditField, setBulkEditField] = useState<keyof Contact>('name');
+  const [bulkEditField, setBulkEditField] = useState<keyof Contact>('firstName');
   const [bulkEditValue, setBulkEditValue] = useState('');
   const [bulkEditOperation, setBulkEditOperation] = useState<'set' | 'append' | 'prepend' | 'replace' | 'regexReplace' | 'findAndReplace' | 'template' | 'fieldMapping'>('set');
   const [bulkEditFindValue, setBulkEditFindValue] = useState('');
@@ -198,43 +251,174 @@ const ContactImport: React.FC = () => {
     strategy: 'prefer_new' | 'prefer_existing' | 'combine' | 'custom';
     customFunction?: string;
   }>>([]);
-  const [importAnalytics, setImportAnalytics] = useState<ImportAnalytics>({
-    totalContacts: 0,
-    duplicatesFound: 0,
-    conflictsDetected: 0,
-    mergedContacts: 0,
-    skippedContacts: 0,
-    normalizationStats: { emailsNormalized: 0, phonesNormalized: 0, namesNormalized: 0 },
-    processingTime: 0,
-    errorCount: 0,
-    warningCount: 0
-  });
 
   const batchProcessor = BatchProcessingService.getInstance();
   const normalizationService = NormalizationService.getInstance();
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const resetState = useCallback(() => {
+    setState(initialState);
+  }, []);
 
-    setFile(file);
-    setError(null);
-    setCurrentStage('parsing');
+  const handleFileUpload = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) return;
+
+    const file = acceptedFiles[0];
+    const fileType = file.name.split('.').pop()?.toLowerCase();
+
+    if (!fileType || !['csv', 'json'].includes(fileType)) {
+      showToast('Please upload a CSV or JSON file', 'error');
+      return;
+    }
+
+    setState(prev => ({
+      ...prev,
+      isImporting: true,
+      stage: 'parsing',
+      progress: 0,
+      errors: []
+    }));
 
     try {
-      const content = await file.text();
-      const format = detectFileFormat(content);
-      if (!format) {
-        throw new Error('Unsupported file format');
+      const text = await file.text();
+      let contacts: Contact[] = [];
+
+      if (fileType === 'csv') {
+        contacts = parseCSV(text);
+      } else {
+        contacts = parseJSON(text);
       }
 
-      const contacts = parseFileContent(content, format);
-      setContacts(contacts);
-      setActiveStep('review');
-    } catch (err) {
-      setError(createError('VALIDATION_ERROR', 'Failed to process file', err));
+      setState(prev => ({
+        ...prev,
+        stats: {
+          ...prev.stats,
+          total: contacts.length
+        }
+      }));
+
+      const batchProcessor = new BatchProcessor({
+        batchSize: 50,
+        similarityThreshold: 0.8,
+        onProgress: (progress, stage) => {
+          setState(prev => ({
+            ...prev,
+            progress,
+            stage
+          }));
+        },
+        onBatchProcessed: (batch, stage) => {
+          setState(prev => ({
+            ...prev,
+            stats: {
+              ...prev.stats,
+              valid: prev.stats.valid + batch.length
+            }
+          }));
+        },
+        onNormalizationComplete: (normalizedContacts) => {
+          setState(prev => ({
+            ...prev,
+            stage: 'normalizing',
+            normalizedContacts: [...prev.normalizedContacts, ...normalizedContacts],
+            stats: {
+              ...prev.stats,
+              normalized: prev.stats.normalized + normalizedContacts.length
+            }
+          }));
+        },
+        onError: (error) => {
+          const importError = new ImportError(
+            'PROCESSING_ERROR',
+            error.message,
+            { stack: error.stack }
+          );
+          setState(prev => ({
+            ...prev,
+            errors: [...prev.errors, importError]
+          }));
+        }
+      });
+
+      const result = await batchProcessor.processContacts(contacts);
+
+      setState(prev => ({
+        ...prev,
+        stage: 'complete',
+        progress: 100,
+        stats: {
+          ...prev.stats,
+          duplicates: result.duplicatesFound
+        },
+        duplicates: result.similarityGroups
+      }));
+
+      showToast(`Successfully imported ${result.contacts.length} contacts`, 'success');
+    } catch (error) {
+      const importError = error instanceof ImportError
+        ? error
+        : new ImportError('PROCESSING_ERROR', 'Failed to process file', {
+            originalError: error instanceof Error ? error.message : String(error)
+          });
+
+      setState(prev => ({
+        ...prev,
+        isImporting: false,
+        stage: 'idle',
+        errors: [...prev.errors, importError]
+      }));
+
+      showToast(importError.message, 'error');
     }
-  };
+  }, [showToast]);
+
+  const handleSaveContacts = useCallback(async () => {
+    if (state.normalizedContacts.length === 0) {
+      showToast('No contacts to save', 'error');
+      return;
+    }
+
+    setState(prev => ({
+      ...prev,
+      stage: 'saving',
+      progress: 0
+    }));
+
+    try {
+      await addContacts(state.normalizedContacts);
+      
+      setState(prev => ({
+        ...prev,
+        stage: 'complete',
+        progress: 100
+      }));
+
+      showToast('Contacts saved successfully', 'success');
+      resetState();
+    } catch (error) {
+      const importError = error instanceof ImportError
+        ? error
+        : new SaveError('Failed to save contacts', {
+            originalError: error instanceof Error ? error.message : String(error)
+          });
+
+      setState(prev => ({
+        ...prev,
+        stage: 'idle',
+        errors: [...prev.errors, importError]
+      }));
+
+      showToast(importError.message, 'error');
+    }
+  }, [state.normalizedContacts, addContacts, showToast, resetState]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: handleFileUpload,
+    accept: {
+      'text/csv': ['.csv'],
+      'application/json': ['.json']
+    },
+    multiple: false
+  });
 
   const handleProcessContacts = async () => {
     setIsProcessing(true);
@@ -271,7 +455,7 @@ const ContactImport: React.FC = () => {
                 ...prev,
                 emailsNormalized: normalizedContacts.filter(c => c.email !== contacts.find(oc => oc.id === c.id)?.email).length,
                 phonesNormalized: normalizedContacts.filter(c => c.phone !== contacts.find(oc => oc.id === c.id)?.phone).length,
-                namesNormalized: normalizedContacts.filter(c => c.name !== contacts.find(oc => oc.id === c.id)?.name).length
+                namesNormalized: normalizedContacts.filter(c => `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() !== `${contacts.find(oc => oc.id === c.id)?.firstName ?? ''} ${contacts.find(oc => oc.id === c.id)?.lastName ?? ''}`.trim()).length
               }));
             }
           });
@@ -283,226 +467,7 @@ const ContactImport: React.FC = () => {
       setBatchStats(result.batchStats);
       setActiveStep('save');
     } catch (err) {
-      setError(createError('UNKNOWN_ERROR', 'Failed to process contacts', err));
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleSaveContacts = async () => {
-    setIsProcessing(true);
-    setCurrentStage('saving');
-    setError(null);
-    const startTime = Date.now();
-
-    try {
-      // Validate contacts before saving
-      const validationErrors = contacts.filter(contact => !contact.name);
-      if (validationErrors.length > 0) {
-        throw new Error(`Found ${validationErrors.length} contacts without names`);
-      }
-
-      // Check for existing contacts with enhanced matching
-      const { data: existingContacts, error: fetchError } = await supabase
-        .from('contacts')
-        .select('id, email, phone, name, company, title, additionalFields, source, createdAt, updatedAt')
-        .in('email', contacts.map(c => c.email).filter(Boolean))
-        .or(`phone.in.(${contacts.map(c => c.phone).filter(Boolean).join(',')})`);
-
-      if (fetchError) throw fetchError;
-
-      // Ensure all existingContacts have createdAt and updatedAt
-      const safeExistingContacts = (existingContacts || []).map(c => ({
-        ...c,
-        createdAt: safeParseDate(c.createdAt) || new Date(),
-        updatedAt: safeParseDate(c.updatedAt) || new Date(),
-      }));
-
-      // Prepare contacts for saving with enhanced metadata
-      const contactsToSave = contacts.map(contact => ({
-        ...contact,
-        createdAt: contact.createdAt || new Date(),
-        updatedAt: new Date(),
-        source: contact.source || 'manual_import',
-        additionalFields: {
-          ...contact.additionalFields,
-          importBatch: new Date().toISOString(),
-          importSource: 'file_import',
-          importMetadata: {
-            originalName: contact.name,
-            originalEmail: contact.email,
-            originalPhone: contact.phone,
-            normalizationStats: {
-              emailChanged: contact.email !== contacts.find(c => c.id === contact.id)?.email,
-              phoneChanged: contact.phone !== contacts.find(c => c.id === contact.id)?.phone,
-              nameChanged: contact.name !== contacts.find(c => c.id === contact.id)?.name
-            },
-            processingHistory: {
-              normalizedAt: new Date(),
-              normalizedBy: 'system',
-              normalizationRules: customRules
-            }
-          }
-        }
-      }));
-
-      // Enhanced conflict detection
-      const conflicts = contactsToSave.filter(contact => 
-        safeExistingContacts.some(existing => isPotentialDuplicate(contact, existing))
-      );
-
-      // Update analytics
-      setImportAnalytics(prev => ({
-        ...prev,
-        totalContacts: contacts.length,
-        conflictsDetected: conflicts.length,
-        duplicatesFound: similarityGroups.filter(g => g.length > 1).length
-      }));
-
-      if (conflicts.length > 0) {
-        // Create a new batch for conflicted contacts with enhanced metadata
-        const { data: batch, error: batchError } = await supabase
-          .from('contact_batches')
-          .insert({
-            type: 'conflict_resolution',
-            status: 'pending',
-            createdAt: new Date(),
-            metadata: {
-              totalConflicts: conflicts.length,
-              source: 'file_import',
-              resolutionStrategy: conflictResolutionStrategy,
-              mergeStrategy: mergeStrategy,
-              customMergeRules: customMergeRules
-            }
-          })
-          .select()
-          .single();
-
-        if (batchError) throw batchError;
-
-        // Handle conflicts based on selected strategy
-        const resolvedContacts = await Promise.all(conflicts.map(async contact => {
-          const existing = safeExistingContacts.find(existing => 
-            (contact.email && existing.email === contact.email) ||
-            (contact.phone && existing.phone === contact.phone)
-          );
-
-          if (!existing) return contact;
-
-          switch (conflictResolutionStrategy) {
-            case 'merge':
-              return mergeContacts(contact, existing, mergeStrategy, customMergeRules);
-            case 'skip':
-              setImportAnalytics(prev => ({ ...prev, skippedContacts: prev.skippedContacts + 1 }));
-              return null;
-            case 'keep_both':
-              return { ...contact, additionalFields: { ...contact.additionalFields, conflictId: existing.id } };
-            case 'custom':
-              // Implement custom conflict resolution logic here
-              return contact;
-          }
-        }));
-
-        // Filter out skipped contacts
-        const contactsToSave = resolvedContacts.filter(Boolean);
-
-        // Save resolved contacts
-        if (contactsToSave.length > 0) {
-          const { error: saveError } = await supabase
-            .from('contacts')
-            .insert(contactsToSave);
-
-          if (saveError) throw saveError;
-        }
-
-        // Create enhanced notification for conflicts
-        await supabase
-          .from('notifications')
-          .insert({
-            type: 'contact_conflicts',
-            message: `Found ${conflicts.length} potential conflicts during import`,
-            metadata: {
-              batchId: batch.id,
-              conflictCount: conflicts.length,
-              resolutionStrategy: conflictResolutionStrategy,
-              mergeStrategy: mergeStrategy,
-              resolvedCount: contactsToSave.length
-            },
-            createdAt: new Date()
-          });
-      } else {
-        // Save all contacts if no conflicts
-        const { error: saveError } = await supabase
-          .from('contacts')
-          .insert(contactsToSave);
-
-        if (saveError) throw saveError;
-      }
-
-      // Create detailed import history record
-      const processingTime = Date.now() - startTime;
-      await supabase
-        .from('import_history')
-        .insert({
-          type: 'file_import',
-          status: 'completed',
-          totalContacts: contacts.length,
-          duplicatesFound: similarityGroups.filter(g => g.length > 1).length,
-          conflictsDetected: conflicts.length,
-          mergedContacts: importAnalytics.mergedContacts,
-          skippedContacts: importAnalytics.skippedContacts,
-          normalizationStats: {
-            emailsNormalized: normalizationStats.emailsNormalized,
-            phonesNormalized: normalizationStats.phonesNormalized,
-            namesNormalized: normalizationStats.namesNormalized
-          },
-          batchStats: batchStats,
-          processingTime,
-          errorCount: importAnalytics.errorCount,
-          warningCount: importAnalytics.warningCount,
-          metadata: {
-            conflictResolutionStrategy,
-            mergeStrategy,
-            customMergeRules,
-            normalizationRules: customRules
-          },
-          createdAt: new Date()
-        });
-
-      // Reset state
-      setActiveStep('upload');
-      setContacts([]);
-      setSimilarityGroups([]);
-      setPreviewContacts([]);
-      setNormalizationStats({ emailsNormalized: 0, phonesNormalized: 0, namesNormalized: 0 });
-      setBatchStats({ totalBatches: 0, processedBatches: 0, failedBatches: 0, duplicatesPerBatch: {} });
-    } catch (err) {
-      setError(createError('DATABASE_ERROR', 'Failed to save contacts', err));
-      
-      // Enhanced error logging
-      const { error: logError } = await supabase
-        .from('error_logs')
-        .insert({
-          type: 'contact_import',
-          error: err instanceof Error ? err.message : 'Unknown error',
-          stack: err instanceof Error ? err.stack : undefined,
-          metadata: {
-            contactCount: contacts.length,
-            stage: currentStage,
-            conflictResolutionStrategy,
-            mergeStrategy,
-            customMergeRules,
-            normalizationRules: customRules
-          },
-          createdAt: new Date()
-        });
-
-      if (logError) {
-        console.error('Failed to log error:', logError);
-      }
-
-      // Update analytics
-      setImportAnalytics(prev => ({ ...prev, errorCount: prev.errorCount + 1 }));
+      setError(createError('PROCESSING_ERROR', 'Failed to process contacts', err instanceof Error ? err : undefined));
     } finally {
       setIsProcessing(false);
     }
@@ -554,7 +519,7 @@ const ContactImport: React.FC = () => {
     setFilterOptions(prev => ({
       ...prev,
       customFilters: [...prev.customFilters, {
-        field: 'name',
+        field: 'firstName',
         operator: 'contains',
         value: '',
         isRegex: false,
@@ -1141,7 +1106,13 @@ const ContactImport: React.FC = () => {
             break;
           case 'combine':
             if (typeof newValue === 'string' && typeof existingValue === 'string') {
-              (merged as any)[rule.field] = `${existingValue}, ${newValue}`;
+              // Special handling for name fields
+              if (rule.field === 'firstName' || rule.field === 'lastName') {
+                const values = [existingValue, newValue].filter(Boolean);
+                (merged as any)[rule.field] = values.join(' ');
+              } else {
+                (merged as any)[rule.field] = `${existingValue}, ${newValue}`;
+              }
             }
             break;
           case 'custom':
@@ -1160,26 +1131,41 @@ const ContactImport: React.FC = () => {
       // Apply default merge strategy
       switch (strategy) {
         case 'prefer_new':
-          merged.name = newContact.name;
+          merged.firstName = newContact.firstName;
+          merged.lastName = newContact.lastName;
           merged.email = newContact.email;
           merged.phone = newContact.phone;
           merged.company = newContact.company;
           merged.title = newContact.title;
           break;
         case 'prefer_existing':
-          merged.name = existingContact.name;
+          merged.firstName = existingContact.firstName;
+          merged.lastName = existingContact.lastName;
           merged.email = existingContact.email;
           merged.phone = existingContact.phone;
           merged.company = existingContact.company;
           merged.title = existingContact.title;
           break;
         case 'combine':
-          merged.name = `${existingContact.name} (${newContact.name})`;
+          // Special handling for name fields
+          merged.firstName = [existingContact.firstName, newContact.firstName].filter(Boolean).join(' ');
+          merged.lastName = [existingContact.lastName, newContact.lastName].filter(Boolean).join(' ');
           merged.email = existingContact.email ? `${existingContact.email}, ${newContact.email}` : newContact.email;
           merged.phone = existingContact.phone ? `${existingContact.phone}, ${newContact.phone}` : newContact.phone;
           merged.company = existingContact.company ? `${existingContact.company}, ${newContact.company}` : newContact.company;
           merged.title = existingContact.title ? `${existingContact.title}, ${newContact.title}` : newContact.title;
           break;
+      }
+    }
+
+    // Validate name fields after merge
+    if (!merged.firstName && !merged.lastName) {
+      // If both name fields are empty, try to extract from email or other fields
+      const emailName = merged.email?.split('@')[0]?.replace(/[._-]/g, ' ');
+      if (emailName) {
+        const parts = emailName.split(' ');
+        merged.firstName = parts[0];
+        merged.lastName = parts.slice(1).join(' ');
       }
     }
 
@@ -1220,1032 +1206,192 @@ const ContactImport: React.FC = () => {
   }, []);
 
   return (
-    <div className="contact-import">
-      <div className="header-section">
-        <h2>Import Contacts</h2>
-        <button
-          className="help-button"
-          onClick={() => setShowHelp(!showHelp)}
-          aria-label="Toggle help"
-        >
-          {showHelp ? 'Hide Help' : 'Show Help'}
-        </button>
-      </div>
-
-      {showHelp && (
-        <div className="help-section">
-          <h3>Import Guide</h3>
-          <div className="help-steps">
-            <div className={`help-step ${activeStep === 'upload' ? 'active' : ''}`}>
-              <h4>1. Upload Contacts</h4>
-              <p>Choose your file format and upload your contact list. Supported formats: CSV, JSON, vCard.</p>
-            </div>
-            <div className={`help-step ${activeStep === 'review' ? 'active' : ''}`}>
-              <h4>2. Review Similar Contacts</h4>
-              <p>Review and merge similar contacts. Adjust the similarity threshold to control matching sensitivity.</p>
-            </div>
-            <div className={`help-step ${activeStep === 'save' ? 'active' : ''}`}>
-              <h4>3. Save Contacts</h4>
-              <p>Save your normalized contacts to the database.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="step-indicator">
-        <div className={`step ${activeStep === 'upload' ? 'active' : ''}`}>
-          <span>1. Upload</span>
-        </div>
-        <div className={`step ${activeStep === 'review' ? 'active' : ''}`}>
-          <span>2. Review</span>
-        </div>
-        <div className={`step ${activeStep === 'save' ? 'active' : ''}`}>
-          <span>3. Save</span>
-        </div>
-      </div>
-
-      {activeStep === 'upload' && (
-        <div 
-          className="file-upload"
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          <input
-            type="file"
-            onChange={handleFileUpload}
-            accept=".csv,.json,.vcf"
-          />
-          <div className="format-selector">
-            <select
-              value={selectedFormat}
-              onChange={(e) => setSelectedFormat(e.target.value as any)}
-            >
-              <option value="auto">Auto-detect</option>
-              <option value="csv">CSV</option>
-              <option value="json">JSON</option>
-              <option value="vcard">vCard</option>
-            </select>
-            <span className="format-hint">
-              {selectedFormat === 'auto' ? 'We\'ll detect the format automatically' : 
-               selectedFormat === 'csv' ? 'CSV should have headers: name,email,phone,company,title' :
-               selectedFormat === 'json' ? 'JSON should be an array of contact objects' :
-               'vCard should be in standard vCard format'}
-            </span>
-          </div>
-          <div className="drag-drop-hint">
-            Or drag and drop your file here
-          </div>
-        </div>
-      )}
-
-      {activeStep === 'review' && (
-        <div className="review-section">
-          <div className="custom-rules">
-            <h3>Custom Normalization Rules</h3>
-            {customRules.map((rule, index) => (
-              <div key={index} className="rule-editor">
-                <select
-                  value={rule.field}
-                  onChange={(e) => {
-                    const newRules = [...customRules];
-                    newRules[index].field = e.target.value as keyof Contact;
-                    setCustomRules(newRules);
-                  }}
-                >
-                  <option value="email">Email</option>
-                  <option value="phone">Phone</option>
-                  <option value="name">Name</option>
-                  <option value="company">Company</option>
-                  <option value="title">Title</option>
-                </select>
-                <input
-                  type="text"
-                  value={rule.pattern}
-                  onChange={(e) => {
-                    const newRules = [...customRules];
-                    newRules[index].pattern = e.target.value;
-                    setCustomRules(newRules);
-                  }}
-                  placeholder="Pattern (regex)"
-                />
-                <input
-                  type="text"
-                  value={rule.replacement}
-                  onChange={(e) => {
-                    const newRules = [...customRules];
-                    newRules[index].replacement = e.target.value;
-                    setCustomRules(newRules);
-                  }}
-                  placeholder="Replacement"
-                />
-                <input
-                  type="text"
-                  value={rule.description}
-                  onChange={(e) => {
-                    const newRules = [...customRules];
-                    newRules[index].description = e.target.value;
-                    setCustomRules(newRules);
-                  }}
-                  placeholder="Description"
-                />
-                <button onClick={() => handleRemoveCustomRule(index)}>
-                  Remove
-                </button>
-              </div>
-            ))}
-            <button onClick={handleAddCustomRule}>
-              Add Custom Rule
-            </button>
-          </div>
-
-          <div className="preview-section">
-            <button onClick={() => setShowPreview(!showPreview)}>
-              {showPreview ? 'Hide Preview' : 'Show Preview'}
-            </button>
-            {showPreview && (
-              <div className="preview-content">
-                <div className="preview-controls">
-                  <div className="filter-controls">
-                    <input
-                      type="text"
-                      placeholder="Search contacts... (Ctrl/Cmd + F)"
-                      value={filterOptions.searchTerm}
-                      onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-                    />
-                    <select
-                      value={filterOptions.field}
-                      onChange={(e) => handleFilterChange('field', e.target.value)}
-                    >
-                      <option value="all">All Fields</option>
-                      <option value="name">Name</option>
-                      <option value="email">Email</option>
-                      <option value="phone">Phone</option>
-                      <option value="company">Company</option>
-                      <option value="title">Title</option>
-                    </select>
-                    <select
-                      value={filterOptions.hasChanges}
-                      onChange={(e) => handleFilterChange('hasChanges', e.target.value)}
-                    >
-                      <option value="all">All Contacts</option>
-                      <option value="changed">Changed Only</option>
-                      <option value="unchanged">Unchanged Only</option>
-                    </select>
-                    <select
-                      value={filterOptions.normalizationType}
-                      onChange={(e) => handleFilterChange('normalizationType', e.target.value)}
-                    >
-                      <option value="all">All Types</option>
-                      <option value="email">Email Changes</option>
-                      <option value="phone">Phone Changes</option>
-                      <option value="name">Name Changes</option>
-                      <option value="company">Company Changes</option>
-                      <option value="title">Title Changes</option>
-                    </select>
-                    <div className="date-range">
-                      <input
-                        type="date"
-                        value={filterOptions.dateRange.start?.toISOString().split('T')[0] || ''}
-                        onChange={(e) => handleDateRangeChange(
-                          e.target.value ? new Date(e.target.value) : null,
-                          filterOptions.dateRange.end
-                        )}
-                      />
-                      <span>to</span>
-                      <input
-                        type="date"
-                        value={filterOptions.dateRange.end?.toISOString().split('T')[0] || ''}
-                        onChange={(e) => handleDateRangeChange(
-                          filterOptions.dateRange.start,
-                          e.target.value ? new Date(e.target.value) : null
-                        )}
-                      />
-                    </div>
-                    <button onClick={handleCustomFilterAdd}>
-                      Add Custom Filter
-                    </button>
-                    <button onClick={() => setShowFilterPresetModal(true)}>
-                      Save Preset
-                    </button>
-                  </div>
-                  <div className="custom-filters">
-                    {filterOptions.customFilters.map((filter: CustomFilter, index: number) => (
-                      <div key={index} className="custom-filter">
-                        <select
-                          value={filter.field}
-                          onChange={(e) => handleFilterChange('customFilters', (prev: CustomFilter[]) => prev.map((f: CustomFilter, i: number) => i === index ? { ...f, field: e.target.value as keyof Contact } : f))}
-                        >
-                          <option value="name">Name</option>
-                          <option value="email">Email</option>
-                          <option value="phone">Phone</option>
-                          <option value="company">Company</option>
-                          <option value="title">Title</option>
-                        </select>
-                        <select
-                          value={filter.operator}
-                          onChange={(e) => handleFilterChange('customFilters', (prev: CustomFilter[]) => prev.map((f: CustomFilter, i: number) => i === index ? { ...f, operator: e.target.value as CustomFilter['operator'] } : f))}
-                        >
-                          <option value="contains">Contains</option>
-                          <option value="equals">Equals</option>
-                          <option value="startsWith">Starts With</option>
-                          <option value="endsWith">Ends With</option>
-                          <option value="regex">Regex</option>
-                          <option value="custom">Custom</option>
-                        </select>
-                        <input
-                          type="text"
-                          value={filter.value}
-                          onChange={(e) => handleFilterChange('customFilters', (prev: CustomFilter[]) => prev.map((f: CustomFilter, i: number) => i === index ? { ...f, value: e.target.value } : f))}
-                          placeholder="Value"
-                        />
-                        <button onClick={() => handleFilterGroupRemove(filter.id || '')}>
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="filter-presets">
-                    {filterPresets.map((preset, index) => (
-                      <div key={index} className="preset">
-                        <span>{preset.name}</span>
-                        <button onClick={() => handleLoadPreset(preset)}>
-                          Load
-                        </button>
-                        <button onClick={() => handleDeletePreset(index)}>
-                          Delete
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="sort-controls">
-                    <select
-                      value={sortOptions.field}
-                      onChange={(e) => handleSortChange('field', e.target.value)}
-                    >
-                      <option value="name">Name</option>
-                      <option value="email">Email</option>
-                      <option value="phone">Phone</option>
-                      <option value="company">Company</option>
-                      <option value="title">Title</option>
-                    </select>
-                    <select
-                      value={sortOptions.direction}
-                      onChange={(e) => handleSortChange('direction', e.target.value)}
-                    >
-                      <option value="asc">Ascending</option>
-                      <option value="desc">Descending</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="preview-stats">
-                  <span>Showing {getFilteredAndSortedContacts().length} of {previewContacts.length} contacts</span>
-                  <span>Selected: {selectedContacts.size}</span>
-                </div>
-                <div className="bulk-actions">
-                  <button
-                    onClick={handleSelectAll}
-                    disabled={getFilteredAndSortedContacts().length === 0}
-                  >
-                    {selectedContacts.size === getFilteredAndSortedContacts().length ? 'Deselect All' : 'Select All'} (Ctrl/Cmd + A)
-                  </button>
-                  <button
-                    onClick={handleBulkRevert}
-                    disabled={selectedContacts.size === 0}
-                  >
-                    Revert Selected (Ctrl/Cmd + R)
-                  </button>
-                  <button
-                    onClick={() => setShowBulkEditModal(true)}
-                    disabled={selectedContacts.size === 0}
-                  >
-                    Edit Selected
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    disabled={selectedContacts.size === 0}
-                    className="danger"
-                  >
-                    Delete Selected
-                  </button>
-                  <button
-                    onClick={handleExportSelected}
-                    disabled={selectedContacts.size === 0}
-                  >
-                    Export Selected (Ctrl/Cmd + E)
-                  </button>
-                  <button
-                    onClick={handleUndo}
-                    disabled={historyIndex < 0}
-                  >
-                    Undo (Ctrl/Cmd + Z)
-                  </button>
-                  <button
-                    onClick={handleRedo}
-                    disabled={historyIndex >= operationHistory.length - 1}
-                  >
-                    Redo (Ctrl/Cmd + Y)
-                  </button>
-                  <button
-                    onClick={() => setShowHistoryPreview(true)}
-                    disabled={operationHistory.length === 0}
-                  >
-                    History Preview
-                  </button>
-                </div>
-                <div className="preview-list">
-                  {getFilteredAndSortedContacts().map(contact => {
-                    const original = contacts.find(c => c.id === contact.id);
-                    return (
-                      <div
-                        key={contact.id}
-                        className={`preview-contact ${selectedContacts.has(contact.id) ? 'selected' : ''}`}
-                        onClick={() => handleSelectContact(contact.id)}
-                      >
-                        <div className="contact-details">
-                          <div className={`field ${contact.name !== original?.name ? 'changed' : ''}`}>
-                            <span className="label">Name:</span>
-                            <span className="value">{contact.name}</span>
-                            {contact.name !== original?.name && (
-                              <span className="original">(was: {original?.name})</span>
-                            )}
-                          </div>
-                          <div className={`field ${contact.email !== original?.email ? 'changed' : ''}`}>
-                            <span className="label">Email:</span>
-                            <span className="value">{contact.email}</span>
-                            {contact.email !== original?.email && (
-                              <span className="original">(was: {original?.email})</span>
-                            )}
-                          </div>
-                          <div className={`field ${contact.phone !== original?.phone ? 'changed' : ''}`}>
-                            <span className="label">Phone:</span>
-                            <span className="value">{contact.phone}</span>
-                            {contact.phone !== original?.phone && (
-                              <span className="original">(was: {original?.phone})</span>
-                            )}
-                          </div>
-                          {contact.company && (
-                            <div className={`field ${contact.company !== original?.company ? 'changed' : ''}`}>
-                              <span className="label">Company:</span>
-                              <span className="value">{contact.company}</span>
-                              {contact.company !== original?.company && (
-                                <span className="original">(was: {original?.company})</span>
-                              )}
-                            </div>
-                          )}
-                          {contact.title && (
-                            <div className={`field ${contact.title !== original?.title ? 'changed' : ''}`}>
-                              <span className="label">Title:</span>
-                              <span className="value">{contact.title}</span>
-                              {contact.title !== original?.title && (
-                                <span className="original">(was: {original?.title})</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <button onClick={(e) => {
-                          e.stopPropagation();
-                          handleRevertChanges(contact);
-                        }}>
-                          Revert Changes
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+    <div className="space-y-6">
+      <div
+        {...getRootProps()}
+        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
+      >
+        <input {...getInputProps()} />
+        <div className="space-y-2">
+          <div className="text-gray-600">
+            {isDragActive ? (
+              <p>Drop the file here...</p>
+            ) : (
+              <p>Drag and drop a CSV or JSON file here, or click to select</p>
             )}
           </div>
+          <p className="text-sm text-gray-500">
+            Supported formats: CSV, JSON
+          </p>
+        </div>
+      </div>
 
-          {showFilterPresetModal && (
-            <div className="modal">
-              <div className="modal-content">
-                <h3>Save Filter Preset</h3>
-                <input
-                  type="text"
-                  value={newPresetName}
-                  onChange={(e) => setNewPresetName(e.target.value)}
-                  placeholder="Preset Name"
-                />
-                <div className="modal-actions">
-                  <button onClick={handleSavePreset}>Save</button>
-                  <button onClick={() => setShowFilterPresetModal(false)}>Cancel</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showBulkEditModal && (
-            <div className="modal">
-              <div className="modal-content">
-                <h3>Bulk Edit Selected Contacts</h3>
-                <div className="form-group">
-                  <label>Operation:</label>
-                  <select
-                    value={bulkEditOperation}
-                    onChange={(e) => setBulkEditOperation(e.target.value as any)}
-                  >
-                    <option value="set">Set Value</option>
-                    <option value="append">Append</option>
-                    <option value="prepend">Prepend</option>
-                    <option value="replace">Replace</option>
-                    <option value="regexReplace">Regex Replace</option>
-                    <option value="findAndReplace">Find and Replace</option>
-                    <option value="template">Template</option>
-                    <option value="fieldMapping">Field Mapping</option>
-                  </select>
-                </div>
-                {bulkEditOperation === 'template' ? (
-                  <div className="form-group">
-                    <label>Template:</label>
-                    <textarea
-                      value={bulkEditTemplate}
-                      onChange={(e) => setBulkEditTemplate(e.target.value)}
-                      placeholder="Use {field} to insert field values"
-                      rows={4}
-                    />
-                    <div className="template-help">
-                      Available fields: {Object.keys(previewContacts[0] || {}).join(', ')}
-                    </div>
-                  </div>
-                ) : bulkEditOperation === 'fieldMapping' ? (
-                  <div className="form-group">
-                    <label>Field Mappings:</label>
-                    {bulkEditFieldMappings.map((mapping, index) => (
-                      <div key={index} className="mapping-row">
-                        <select
-                          value={mapping.sourceField}
-                          onChange={(e) => {
-                            const newMappings = [...bulkEditFieldMappings];
-                            newMappings[index].sourceField = e.target.value as keyof Contact;
-                            setBulkEditFieldMappings(newMappings);
-                          }}
-                        >
-                          {Object.keys(previewContacts[0] || {}).map(field => (
-                            <option key={field} value={field}>{field}</option>
-                          ))}
-                        </select>
-                        <span>→</span>
-                        <select
-                          value={mapping.targetField}
-                          onChange={(e) => {
-                            const newMappings = [...bulkEditFieldMappings];
-                            newMappings[index].targetField = e.target.value as keyof Contact;
-                            setBulkEditFieldMappings(newMappings);
-                          }}
-                        >
-                          {Object.keys(previewContacts[0] || {}).map(field => (
-                            <option key={field} value={field}>{field}</option>
-                          ))}
-                        </select>
-                        <input
-                          type="text"
-                          value={mapping.transform || ''}
-                          onChange={(e) => {
-                            const newMappings = [...bulkEditFieldMappings];
-                            newMappings[index].transform = e.target.value;
-                            setBulkEditFieldMappings(newMappings);
-                          }}
-                          placeholder="Transform function (optional)"
-                        />
-                        <button
-                          onClick={() => {
-                            setBulkEditFieldMappings(prev => prev.filter((_, i) => i !== index));
-                          }}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        setBulkEditFieldMappings(prev => [...prev, {
-                          sourceField: 'name',
-                          targetField: 'name',
-                          transform: ''
-                        }]);
-                      }}
-                    >
-                      Add Mapping
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="form-group">
-                      <label>Field:</label>
-                      <select
-                        value={bulkEditField}
-                        onChange={(e) => setBulkEditField(e.target.value as keyof Contact)}
-                      >
-                        {Object.keys(previewContacts[0] || {}).map(field => (
-                          <option key={field} value={field}>{field}</option>
-                        ))}
-                      </select>
-                    </div>
-                    {bulkEditOperation === 'set' && (
-                      <div className="form-group">
-                        <label>Value:</label>
-                        <input
-                          type="text"
-                          value={bulkEditValue}
-                          onChange={(e) => setBulkEditValue(e.target.value)}
-                          placeholder="Enter value"
-                        />
-                      </div>
-                    )}
-                    {(bulkEditOperation === 'replace' || bulkEditOperation === 'regexReplace' || bulkEditOperation === 'findAndReplace') && (
-                      <>
-                        <div className="form-group">
-                          <label>Find:</label>
-                          <input
-                            type="text"
-                            value={bulkEditFindValue}
-                            onChange={(e) => setBulkEditFindValue(e.target.value)}
-                            placeholder="Text to find"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Replace with:</label>
-                          <input
-                            type="text"
-                            value={bulkEditReplaceValue}
-                            onChange={(e) => setBulkEditReplaceValue(e.target.value)}
-                            placeholder="Replacement text"
-                          />
-                        </div>
-                        {bulkEditOperation === 'regexReplace' && (
-                          <div className="form-group">
-                            <label>Regex Flags:</label>
-                            <input
-                              type="text"
-                              value={bulkEditRegexFlags}
-                              onChange={(e) => setBulkEditRegexFlags(e.target.value)}
-                              placeholder="e.g., gi"
-                            />
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-                <div className="modal-actions">
-                  <button onClick={handleBulkEdit}>Apply</button>
-                  <button onClick={() => setShowBulkEditModal(false)}>Cancel</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showHistoryPreview && (
-            <div className="modal">
-              <div className="modal-content">
-                <h3>Operation History</h3>
-                <div className="history-list">
-                  {operationHistory.map((operation, index) => (
-                    <div
-                      key={index}
-                      className={`history-item ${index === historyIndex ? 'current' : ''}`}
-                      onClick={() => {
-                        setPreviewOperation(operation);
-                        setHistoryIndex(index);
-                      }}
-                    >
-                      <div className="history-time">
-                        {new Date(operation.timestamp).toLocaleString()}
-                      </div>
-                      <div className="history-description">
-                        {operation.description}
-                      </div>
-                      {operation.preview && (
-                        <div className="history-preview">
-                          {operation.preview.slice(0, 3).map(contact => (
-                            <div key={contact.id} className="preview-contact">
-                              {Object.entries(contact).map(([key, value]) => (
-                                <div key={key} className="preview-field">
-                                  <span className="field-name">{key}:</span>
-                                  <span className="field-value">{value}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                          {operation.preview.length > 3 && (
-                            <div className="preview-more">
-                              +{operation.preview.length - 3} more contacts
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="modal-actions">
-                  <button onClick={() => setShowHistoryPreview(false)}>Close</button>
-                </div>
-              </div>
-            </div>
-          )}
+      {state.isImporting && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">
+              {state.stage.charAt(0).toUpperCase() + state.stage.slice(1)}
+            </span>
+            <span className="text-sm text-gray-500">{state.progress}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${state.progress}%` }}
+            />
+          </div>
         </div>
       )}
 
-      {activeStep === 'save' && (
-        <div className="save-section">
-          <div className="stats-display">
-            <h3>Processing Statistics</h3>
-            <div className="stat-group">
-              <div className="stat">
-                <span className="label">Total Contacts:</span>
-                <span className="value">{contacts.length}</span>
-              </div>
-              <div className="stat">
-                <span className="label">Duplicates Found:</span>
-                <span className="value">{similarityGroups.filter(g => g.length > 1).length}</span>
-              </div>
+      {state.stats.total > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Import Summary</h3>
+          <dl className="grid grid-cols-2 gap-4">
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Total Contacts</dt>
+              <dd className="mt-1 text-2xl font-semibold text-gray-900">{state.stats.total}</dd>
             </div>
-            <div className="stat-group">
-              <div className="stat">
-                <span className="label">Emails Normalized:</span>
-                <span className="value">{normalizationStats.emailsNormalized}</span>
-              </div>
-              <div className="stat">
-                <span className="label">Phones Normalized:</span>
-                <span className="value">{normalizationStats.phonesNormalized}</span>
-              </div>
-              <div className="stat">
-                <span className="label">Names Normalized:</span>
-                <span className="value">{normalizationStats.namesNormalized}</span>
-              </div>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Valid Contacts</dt>
+              <dd className="mt-1 text-2xl font-semibold text-green-600">{state.stats.valid}</dd>
             </div>
-            <div className="stat-group">
-              <div className="stat">
-                <span className="label">Batches Processed:</span>
-                <span className="value">{batchStats.processedBatches}/{batchStats.totalBatches}</span>
-              </div>
-              <div className="stat">
-                <span className="label">Failed Batches:</span>
-                <span className="value">{batchStats.failedBatches}</span>
-              </div>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Invalid Contacts</dt>
+              <dd className="mt-1 text-2xl font-semibold text-red-600">{state.stats.invalid}</dd>
             </div>
-          </div>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Potential Duplicates</dt>
+              <dd className="mt-1 text-2xl font-semibold text-yellow-600">{state.stats.duplicates}</dd>
+            </div>
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Normalized</dt>
+              <dd className="mt-1 text-2xl font-semibold text-blue-600">{state.stats.normalized}</dd>
+            </div>
+          </dl>
+        </div>
+      )}
 
-          <div className="similarity-groups">
-            <h3>Similar Contacts</h3>
-            {similarityGroups
-              .filter(group => group.length > 1)
-              .map((group, index) => (
-                <div key={index} className="similarity-group">
-                  <h4>Group {index + 1}</h4>
-                  {group.map(contact => (
-                    <div key={contact.id} className="contact">
-                      <div>Name: {contact.name}</div>
-                      <div>Email: {contact.email}</div>
-                      <div>Phone: {contact.phone}</div>
-                    </div>
+      {state.errors.length > 0 && (
+        <div className="bg-red-50 rounded-lg p-4">
+          <h3 className="text-lg font-medium text-red-800 mb-2">Import Errors</h3>
+          <ul className="space-y-2">
+            {state.errors.map((error, index) => (
+              <li key={index} className="text-sm text-red-700">
+                {error.message}
+                {error.details && (
+                  <p className="mt-1 text-xs text-red-600">{error.details.stack}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {state.duplicates.length > 0 && (
+        <div className="bg-yellow-50 rounded-lg p-4">
+          <h3 className="text-lg font-medium text-yellow-800 mb-2">Potential Duplicates</h3>
+          <div className="space-y-4">
+            {state.duplicates.map((group, index) => (
+              <div key={index} className="bg-white rounded p-3">
+                <h4 className="font-medium text-yellow-900 mb-2">Group {index + 1}</h4>
+                <ul className="space-y-2">
+                  {group.map((contact, contactIndex) => (
+                    <li key={contactIndex} className="text-sm text-yellow-800">
+                      {contact.firstName} {contact.lastName}
+                      {contact.email && ` (${contact.email})`}
+                    </li>
                   ))}
-                </div>
-              ))}
+                </ul>
+              </div>
+            ))}
           </div>
+        </div>
+      )}
 
+      {state.stage === 'complete' && state.normalizedContacts.length > 0 && (
+        <div className="flex justify-end space-x-4">
+          <button
+            onClick={resetState}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Cancel
+          </button>
           <button
             onClick={handleSaveContacts}
-            disabled={isProcessing}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
           >
             Save Contacts
           </button>
         </div>
       )}
-
-      {isProcessing && (
-        <div className="progress-section">
-          <div className="stage-indicator">
-            Current Stage: {currentStage}
-          </div>
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <div className="progress-text">
-            {Math.round(progress)}%
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="error-section">
-          <div className="error-message">
-            {formatErrorForDisplay(error)}
-          </div>
-          <div className="error-details">
-            {getErrorResolutionSteps(error)}
-          </div>
-          {isRecoverableError(error) && (
-            <button onClick={() => setError(null)}>
-              Try Again
-            </button>
-          )}
-        </div>
-      )}
-
-      <style jsx>{`
-        .preview-controls {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          margin-bottom: 20px;
-        }
-
-        .filter-controls, .sort-controls {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-
-        .filter-controls input,
-        .filter-controls select,
-        .sort-controls select {
-          padding: 8px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          min-width: 150px;
-        }
-
-        .preview-stats {
-          margin-bottom: 10px;
-          color: #666;
-          font-size: 0.9em;
-        }
-
-        .preview-list {
-          max-height: 500px;
-          overflow-y: auto;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-        }
-
-        .preview-contact {
-          padding: 15px;
-          border-bottom: 1px solid #eee;
-        }
-
-        .preview-contact:last-child {
-          border-bottom: none;
-        }
-
-        .contact-details {
-          margin-bottom: 10px;
-        }
-
-        .field {
-          margin-bottom: 5px;
-        }
-
-        .field.changed {
-          background-color: #f0f7ff;
-          padding: 5px;
-          border-radius: 4px;
-        }
-
-        .label {
-          font-weight: bold;
-          margin-right: 5px;
-          min-width: 60px;
-          display: inline-block;
-        }
-
-        .value {
-          color: #333;
-        }
-
-        .original {
-          color: #666;
-          font-size: 0.9em;
-          margin-left: 10px;
-        }
-
-        .date-range {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .custom-filters {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          margin: 10px 0;
-        }
-
-        .custom-filter {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-        }
-
-        .filter-presets {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          margin: 10px 0;
-        }
-
-        .preset {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          padding: 5px 10px;
-          background-color: #f5f5f5;
-          border-radius: 4px;
-        }
-
-        .bulk-actions {
-          display: flex;
-          gap: 10px;
-          margin: 10px 0;
-        }
-
-        .preview-contact {
-          cursor: pointer;
-        }
-
-        .preview-contact.selected {
-          background-color: #e3f2fd;
-        }
-
-        .modal {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
-
-        .modal-content {
-          background-color: white;
-          padding: 20px;
-          border-radius: 4px;
-          min-width: 300px;
-        }
-
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          margin-top: 20px;
-        }
-
-        .danger {
-          background-color: #ff4444;
-          color: white;
-        }
-
-        .danger:hover {
-          background-color: #cc0000;
-        }
-
-        .form-group {
-          margin-bottom: 15px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 5px;
-          font-weight: bold;
-        }
-
-        .form-group select,
-        .form-group input {
-          width: 100%;
-          padding: 8px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-        }
-
-        .filter-group {
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          padding: 10px;
-          margin: 10px 0;
-          background-color: #f9f9f9;
-          cursor: move;
-        }
-
-        .filter-group.dragging {
-          opacity: 0.5;
-        }
-
-        .filter-group.drag-over {
-          border-color: #2196F3;
-          background-color: #E3F2FD;
-        }
-
-        .template-help {
-          font-size: 0.8em;
-          color: #666;
-          margin-top: 5px;
-        }
-
-        .mapping-row {
-          display: flex;
-          gap: 10px;
-          align-items: center;
-          margin-bottom: 10px;
-        }
-
-        .history-list {
-          max-height: 400px;
-          overflow-y: auto;
-          margin: 20px 0;
-        }
-
-        .history-item {
-          padding: 10px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          margin-bottom: 10px;
-          cursor: pointer;
-        }
-
-        .history-item:hover {
-          background-color: #f5f5f5;
-        }
-
-        .history-item.current {
-          border-color: #2196F3;
-          background-color: #E3F2FD;
-        }
-
-        .history-time {
-          font-size: 0.8em;
-          color: #666;
-        }
-
-        .history-description {
-          margin: 5px 0;
-          font-weight: bold;
-        }
-
-        .history-preview {
-          margin-top: 10px;
-          padding: 10px;
-          background-color: #f9f9f9;
-          border-radius: 4px;
-        }
-
-        .preview-contact {
-          margin-bottom: 10px;
-          padding: 5px;
-          border-bottom: 1px solid #eee;
-        }
-
-        .preview-field {
-          display: flex;
-          gap: 10px;
-        }
-
-        .preview-more {
-          text-align: center;
-          color: #666;
-          font-style: italic;
-        }
-
-        .filter-group {
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          padding: 10px;
-          margin: 10px 0;
-          background-color: #f9f9f9;
-          cursor: move;
-          position: relative;
-        }
-
-        .filter-group.selected {
-          border-color: #2196F3;
-          background-color: #E3F2FD;
-        }
-
-        .filter-group.dragging {
-          opacity: 0.5;
-        }
-
-        .filter-group.drag-over {
-          border-color: #2196F3;
-          background-color: #E3F2FD;
-        }
-
-        .filter-group-level-1 {
-          margin-left: 20px;
-        }
-
-        .filter-group-level-2 {
-          margin-left: 40px;
-        }
-      `}</style>
     </div>
   );
 };
+
+function parseCSV(text: string): Contact[] {
+  const lines = text.split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  
+  return lines.slice(1).map(line => {
+    const values = line.split(',').map(v => v.trim());
+    const contact: Contact = {
+      id: '',
+      email: '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    headers.forEach((header, index) => {
+      const value = values[index];
+      if (!value) return;
+      
+      switch (header) {
+        case 'first name':
+        case 'firstname':
+        case 'first_name':
+          contact.firstName = value;
+          break;
+        case 'last name':
+        case 'lastname':
+        case 'last_name':
+          contact.lastName = value;
+          break;
+        case 'email':
+          contact.email = value;
+          break;
+        case 'phone':
+        case 'phone number':
+        case 'phone_number':
+          contact.phone = value;
+          break;
+        case 'company':
+          contact.company = value;
+          break;
+        case 'title':
+        case 'job title':
+        case 'job_title':
+          contact.title = value;
+          break;
+        default:
+          if (!contact.additionalFields) {
+            contact.additionalFields = {};
+          }
+          contact.additionalFields[header] = value;
+      }
+    });
+    
+    return contact;
+  });
+}
+
+function parseJSON(text: string): Contact[] {
+  try {
+    const data = JSON.parse(text);
+    return Array.isArray(data) ? data : [data];
+  } catch (error) {
+    throw new ImportError('PARSE_ERROR', 'Invalid JSON format');
+  }
+}
 
 export default ContactImport; 

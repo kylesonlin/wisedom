@@ -2,12 +2,15 @@ import { Contact } from '../types/contact';
 import { normalizeContacts } from './contactNormalization';
 import { groupSimilarContacts } from './mlDuplicateDetection';
 
+export type ProcessingStage = 'idle' | 'parsing' | 'validating' | 'normalizing' | 'saving' | 'complete';
+
 interface BatchProcessorOptions {
   batchSize?: number;
   similarityThreshold?: number;
   onProgress?: (progress: number, stage: ProcessingStage) => void;
   onBatchProcessed?: (batch: Contact[], stage: ProcessingStage) => void;
   onNormalizationComplete?: (normalizedContacts: Contact[]) => void;
+  onError?: (error: Error) => void;
 }
 
 interface BatchProcessorResult {
@@ -23,9 +26,7 @@ interface BatchProcessorResult {
   };
 }
 
-type ProcessingStage = 'parsing' | 'normalizing' | 'deduplicating' | 'saving';
-
-const getFullName = (contact: any) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
 
 export class BatchProcessor {
   private batchSize: number;
@@ -33,13 +34,15 @@ export class BatchProcessor {
   private onProgress?: (progress: number, stage: ProcessingStage) => void;
   private onBatchProcessed?: (batch: Contact[], stage: ProcessingStage) => void;
   private onNormalizationComplete?: (normalizedContacts: Contact[]) => void;
+  private onError?: (error: Error) => void;
 
   constructor(options: BatchProcessorOptions = {}) {
-    this.batchSize = options.batchSize || 1000;
+    this.batchSize = options.batchSize || 50;
     this.similarityThreshold = options.similarityThreshold || 0.8;
     this.onProgress = options.onProgress;
     this.onBatchProcessed = options.onBatchProcessed;
     this.onNormalizationComplete = options.onNormalizationComplete;
+    this.onError = options.onError;
   }
 
   async processContacts(
@@ -60,63 +63,80 @@ export class BatchProcessor {
       namesNormalized: 0
     };
 
-    // Split contacts into batches
-    for (let i = 0; i < totalContacts; i += batchSize) {
-      batches.push(contacts.slice(i, i + batchSize));
+    try {
+      // Split contacts into batches
+      for (let i = 0; i < totalContacts; i += batchSize) {
+        batches.push(contacts.slice(i, i + batchSize));
+      }
+
+      // Process each batch
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        
+        // Update parsing progress
+        const parsingProgress = Math.round(((i + 1) / batches.length) * 100);
+        this.onProgress?.(parsingProgress, 'parsing');
+        
+        // Validate batch
+        this.onProgress?.(0, 'validating');
+        const validatedBatch = await this.validateBatch(batch);
+        this.onBatchProcessed?.(validatedBatch, 'validating');
+        
+        // Normalize batch
+        const normalizedBatch = normalizeContacts(validatedBatch);
+        
+        // Track normalization statistics
+        normalizedBatch.forEach(contact => {
+          if (contact.email?.includes('normalized')) normalizationStats.emailsNormalized++;
+          if (contact.phone?.includes('normalized')) normalizationStats.phonesNormalized++;
+          if (getFullName(contact).includes('normalized')) normalizationStats.namesNormalized++;
+        });
+        
+        this.onNormalizationComplete?.(normalizedBatch);
+        
+        // Find similar contacts in the batch
+        const batchGroups = groupSimilarContacts(normalizedBatch, threshold);
+        
+        // Merge similar contacts within the batch
+        const mergedBatch = this.mergeBatchGroups(normalizedBatch, batchGroups);
+        
+        // Add to processed contacts
+        processedContacts.push(...mergedBatch);
+        
+        // Update progress
+        const progress = Math.round(((i + 1) / batches.length) * 100);
+        this.onProgress?.(progress, 'saving');
+        this.onBatchProcessed?.(mergedBatch, 'saving');
+      }
+
+      // Final pass to find similar contacts across all batches
+      const finalGroups = groupSimilarContacts(processedContacts, threshold);
+      allSimilarityGroups.push(...finalGroups);
+
+      const processingTime = Date.now() - startTime;
+
+      return {
+        contacts: processedContacts,
+        similarityGroups: allSimilarityGroups,
+        totalProcessed: totalContacts,
+        processingTime,
+        duplicatesFound: allSimilarityGroups.filter(group => group.length > 1).length,
+        normalizationStats
+      };
+    } catch (error) {
+      this.onError?.(error instanceof Error ? error : new Error(String(error)));
+      throw error;
     }
+  }
 
-    // Process each batch
-    for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i];
-      
-      // Update parsing progress
-      const parsingProgress = Math.round(((i + 1) / batches.length) * 100);
-      this.onProgress?.(parsingProgress, 'parsing');
-      
-      // Normalize batch
-      this.onProgress?.(0, 'normalizing');
-      const normalizedBatch = normalizeContacts(batch);
-      
-      // Track normalization statistics
-      normalizedBatch.forEach(contact => {
-        if (contact.email?.includes('normalized')) normalizationStats.emailsNormalized++;
-        if (contact.phone?.includes('normalized')) normalizationStats.phonesNormalized++;
-        if (getFullName(contact).includes('normalized')) normalizationStats.namesNormalized++;
-      });
-      
-      this.onNormalizationComplete?.(normalizedBatch);
-      this.onBatchProcessed?.(normalizedBatch, 'normalizing');
-      
-      // Find similar contacts in the batch
-      this.onProgress?.(0, 'deduplicating');
-      const batchGroups = groupSimilarContacts(normalizedBatch, threshold);
-      
-      // Merge similar contacts within the batch
-      const mergedBatch = this.mergeBatchGroups(normalizedBatch, batchGroups);
-      
-      // Add to processed contacts
-      processedContacts.push(...mergedBatch);
-      
-      // Update progress
-      const progress = Math.round(((i + 1) / batches.length) * 100);
-      this.onProgress?.(progress, 'deduplicating');
-      this.onBatchProcessed?.(mergedBatch, 'deduplicating');
-    }
-
-    // Final pass to find similar contacts across all batches
-    const finalGroups = groupSimilarContacts(processedContacts, threshold);
-    allSimilarityGroups.push(...finalGroups);
-
-    const processingTime = Date.now() - startTime;
-
-    return {
-      contacts: processedContacts,
-      similarityGroups: allSimilarityGroups,
-      totalProcessed: totalContacts,
-      processingTime,
-      duplicatesFound: allSimilarityGroups.filter(group => group.length > 1).length,
-      normalizationStats
-    };
+  private async validateBatch(batch: Contact[]): Promise<Contact[]> {
+    return batch.map(contact => ({
+      ...contact,
+      firstName: contact.firstName?.trim(),
+      lastName: contact.lastName?.trim(),
+      email: contact.email?.toLowerCase().trim(),
+      phone: contact.phone?.trim()
+    }));
   }
 
   private mergeBatchGroups(contacts: Contact[], groups: Contact[][]): Contact[] {
@@ -171,9 +191,12 @@ export class BatchProcessor {
 
       // Merge names if different
       if (getFullName(current) !== getFullName(merged)) {
-        merged.name = merged.name
-          ? `${merged.name} (${getFullName(current)})`
-          : getFullName(current);
+        merged.firstName = merged.firstName
+          ? `${merged.firstName} (${current.firstName})`
+          : current.firstName;
+        merged.lastName = merged.lastName
+          ? `${merged.lastName} (${current.lastName})`
+          : current.lastName;
       }
 
       // Merge additional fields
@@ -204,4 +227,6 @@ export class BatchProcessor {
 
     return merged;
   }
-} 
+}
+
+export default BatchProcessor; 

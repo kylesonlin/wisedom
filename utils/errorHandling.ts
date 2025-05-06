@@ -1,162 +1,66 @@
 import { Contact } from '../types/contact';
 
-export type ImportErrorType = 
-  | 'VALIDATION_ERROR'
-  | 'API_ERROR'
-  | 'DATABASE_ERROR'
-  | 'NETWORK_ERROR'
-  | 'UNKNOWN_ERROR';
+export type ImportErrorType = 'FILE_ERROR' | 'PARSE_ERROR' | 'VALIDATION_ERROR' | 'PROCESSING_ERROR' | 'SAVE_ERROR';
 
-export interface ImportError {
+export interface ImportErrorContext {
+  file?: string;
+  line?: number;
+  column?: number;
+  code?: string;
+  sessionId?: string;
+  fileFormat?: string;
+  userId?: string;
+  lineNumber?: number;
+  batchIndex?: number;
+}
+
+export class ImportError extends Error {
   type: ImportErrorType;
-  message: string;
-  details?: Record<string, any>;
-  context?: Record<string, any>;
+  details: Record<string, any>;
   timestamp: Date;
-  userId?: string;
-  sessionId?: string;
-}
+  context?: ImportErrorContext;
 
-export class ValidationError implements ImportError {
-  type: ImportErrorType = 'VALIDATION_ERROR';
-  message: string;
-  details?: Record<string, any>;
-  context?: Record<string, any>;
-  timestamp: Date;
-  userId?: string;
-  sessionId?: string;
-
-  constructor(message: string, details?: Record<string, any>, context?: Record<string, any>) {
-    this.message = message;
-    this.details = details;
-    this.context = context;
+  constructor(type: ImportErrorType, message: string, details?: Record<string, any>, context?: ImportErrorContext) {
+    super(message);
+    this.type = type;
+    this.details = details || {};
     this.timestamp = new Date();
+    this.context = context;
+    this.name = 'ImportError';
   }
 }
 
-export class ApiError implements ImportError {
-  type: ImportErrorType = 'API_ERROR';
-  message: string;
-  details?: Record<string, any>;
-  context?: Record<string, any>;
-  timestamp: Date;
-  userId?: string;
-  sessionId?: string;
-
-  constructor(message: string, details?: Record<string, any>, context?: Record<string, any>) {
-    this.message = message;
-    this.details = details;
-    this.context = context;
-    this.timestamp = new Date();
+export class ValidationError extends ImportError {
+  constructor(message: string, details?: Record<string, any>, context?: ImportErrorContext) {
+    super('VALIDATION_ERROR', message, details, context);
+    this.name = 'ValidationError';
   }
 }
 
-export class DatabaseError implements ImportError {
-  type: ImportErrorType = 'DATABASE_ERROR';
-  message: string;
-  details?: Record<string, any>;
-  context?: Record<string, any>;
-  timestamp: Date;
-  userId?: string;
-  sessionId?: string;
-
-  constructor(message: string, details?: Record<string, any>, context?: Record<string, any>) {
-    this.message = message;
-    this.details = details;
-    this.context = context;
-    this.timestamp = new Date();
+export class ProcessingError extends ImportError {
+  constructor(message: string, details?: Record<string, any>, context?: ImportErrorContext) {
+    super('PROCESSING_ERROR', message, details, context);
+    this.name = 'ProcessingError';
   }
 }
 
-export class NetworkError implements ImportError {
-  type: ImportErrorType = 'NETWORK_ERROR';
-  message: string;
-  details?: Record<string, any>;
-  context?: Record<string, any>;
-  timestamp: Date;
-  userId?: string;
-  sessionId?: string;
-
-  constructor(message: string, details?: Record<string, any>, context?: Record<string, any>) {
-    this.message = message;
-    this.details = details;
-    this.context = context;
-    this.timestamp = new Date();
+export class SaveError extends ImportError {
+  constructor(message: string, details?: Record<string, any>, context?: ImportErrorContext) {
+    super('SAVE_ERROR', message, details, context);
+    this.name = 'SaveError';
   }
 }
 
-export class UnknownError implements ImportError {
-  type: ImportErrorType = 'UNKNOWN_ERROR';
-  message: string;
-  details?: Record<string, any>;
-  context?: Record<string, any>;
-  timestamp: Date;
-  userId?: string;
-  sessionId?: string;
-
-  constructor(message: string, details?: Record<string, any>, context?: Record<string, any>) {
-    this.message = message;
-    this.details = details;
-    this.context = context;
-    this.timestamp = new Date();
-  }
-}
-
-export class ImportErrorLogger {
-  private static instance: ImportErrorLogger;
-  private errors: ImportError[] = [];
-
-  private constructor() {}
-
-  static getInstance(): ImportErrorLogger {
-    if (!ImportErrorLogger.instance) {
-      ImportErrorLogger.instance = new ImportErrorLogger();
+export function createError(type: ImportErrorType, message: string, error?: Error, context?: ImportErrorContext): ImportError {
+  const details: Record<string, any> = {};
+  if (error) {
+    details.stack = error.stack;
+    details.name = error.name;
+    if (error instanceof ImportError) {
+      Object.assign(details, error.details);
     }
-    return ImportErrorLogger.instance;
   }
-
-  logError(error: Omit<ImportError, 'timestamp'>): ImportError {
-    const fullError: ImportError = {
-      ...error,
-      timestamp: new Date()
-    };
-    
-    this.errors.push(fullError);
-    console.error('Contact Import Error:', {
-      type: fullError.type,
-      message: fullError.message,
-      details: fullError.details,
-      context: fullError.context
-    });
-    
-    return fullError;
-  }
-
-  getErrors(): ImportError[] {
-    return this.errors;
-  }
-
-  getErrorsByType(type: ImportErrorType): ImportError[] {
-    return this.errors.filter(error => error.type === type);
-  }
-
-  clearErrors(): void {
-    this.errors = [];
-  }
-}
-
-export function createError(
-  type: ImportErrorType,
-  message: string,
-  details?: any,
-  context?: ImportError['context']
-): ImportError {
-  return ImportErrorLogger.getInstance().logError({
-    type,
-    message,
-    details,
-    context
-  });
+  return new ImportError(type, message, details, context);
 }
 
 export function formatErrorForDisplay(error: ImportError): string {
