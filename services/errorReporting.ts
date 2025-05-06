@@ -109,8 +109,8 @@ export class ErrorReportingService {
           details: error.details,
           context: error.context,
           timestamp: error.timestamp,
-          user_id: error.userId || null,
-          session_id: error.sessionId || null,
+          user_id: error.context?.userId || null,
+          session_id: error.context?.sessionId || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           resolved: false
@@ -170,11 +170,11 @@ export class ErrorReportingService {
 
       const dailyTrends: Record<string, number> = {};
       const typeDistribution: Record<ImportErrorType, number> = {
+        'FILE_ERROR': 0,
+        'PARSE_ERROR': 0,
         'VALIDATION_ERROR': 0,
-        'API_ERROR': 0,
-        'DATABASE_ERROR': 0,
-        'NETWORK_ERROR': 0,
-        'UNKNOWN_ERROR': 0
+        'PROCESSING_ERROR': 0,
+        'SAVE_ERROR': 0
       };
       let recoveredCount = 0;
 
