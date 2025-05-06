@@ -19,7 +19,7 @@ export interface FilterOptions {
 }
 
 export interface SortOptions {
-  field: 'priority' | 'lastInteraction' | 'name' | 'company' | 'relationshipStrength';
+  field: 'priority' | 'lastInteraction' | 'firstName' | 'lastName' | 'company' | 'relationshipStrength';
   direction: 'asc' | 'desc';
 }
 
@@ -168,8 +168,12 @@ export function sortContacts(
         comparison = timeA - timeB;
         break;
 
-      case 'name':
-        comparison = getFullName(a).localeCompare(getFullName(b));
+      case 'firstName':
+        comparison = (a.firstName || '').localeCompare(b.firstName || '');
+        break;
+
+      case 'lastName':
+        comparison = (a.lastName || '').localeCompare(b.lastName || '');
         break;
 
       case 'company':

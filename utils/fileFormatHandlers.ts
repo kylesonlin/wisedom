@@ -27,15 +27,13 @@ const csvHandler: FileFormatHandler = {
         if (!value) return;
         
         switch (header) {
-          case 'name':
-            if (value.includes(' ')) {
-              const [firstName, ...rest] = value.split(' ');
-              contact.firstName = firstName;
-              contact.lastName = rest.join(' ');
-            } else {
-              contact.firstName = value;
-              contact.lastName = '';
-            }
+          case 'firstname':
+          case 'first_name':
+            contact.firstName = value;
+            break;
+          case 'lastname':
+          case 'last_name':
+            contact.lastName = value;
             break;
           case 'email':
             contact.email = value;
@@ -76,7 +74,7 @@ const csvHandler: FileFormatHandler = {
     if (lines.length < 2) return false;
     
     const headers = lines[0].split(',').map(h => h.trim());
-    return headers.length > 0 && headers.some(h => h.toLowerCase() === 'name');
+    return headers.length > 0 && (headers.some(h => h.toLowerCase() === 'firstname') || headers.some(h => h.toLowerCase() === 'lastName'));
   }
 };
 

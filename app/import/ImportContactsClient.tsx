@@ -15,7 +15,8 @@ const supabase = createClient(
 );
 
 const contactFields = [
-  { label: 'Name (First + Last)', value: 'name' },
+  { label: 'First Name', value: 'firstName' },
+  { label: 'Last Name', value: 'lastName' },
   { label: 'Email', value: 'email' },
   { label: 'Phone Number', value: 'phone' },
   { label: 'Company', value: 'company' },
@@ -23,8 +24,6 @@ const contactFields = [
   { label: 'LinkedIn', value: 'linkedin' },
   { label: 'Date of Connection', value: 'date_of_connection' },
   { label: 'Secondary Phone Number', value: 'secondary_phone' },
-  { label: 'First Name', value: 'firstName' },
-  { label: 'Last Name', value: 'lastName' },
 ];
 
 export default function ImportContactsClient() {

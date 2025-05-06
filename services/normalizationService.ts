@@ -22,7 +22,8 @@ interface NormalizationStats {
   changesByType: {
     email: number;
     phone: number;
-    name: number;
+    firstName: number;
+    lastName: number;
     company: number;
     title: number;
   };
@@ -45,10 +46,16 @@ export class NormalizationService {
       description: 'Remove non-numeric characters from phone'
     },
     {
-      field: 'name',
+      field: 'firstName',
       pattern: /\s+/g,
       replacement: ' ',
-      description: 'Normalize whitespace in names'
+      description: 'Normalize whitespace in first names'
+    },
+    {
+      field: 'lastName',
+      pattern: /\s+/g,
+      replacement: ' ',
+      description: 'Normalize whitespace in last names'
     }
   ];
   private customRules: NormalizationRule[] = [];
@@ -85,7 +92,7 @@ export class NormalizationService {
     const allRules = this.getRules();
     
     const stringFields: (keyof Contact)[] = [
-      'id', 'name', 'email', 'phone', 'company', 'title', 'birthday', 'assignedTo', 'notes', 'source'
+      'id', 'firstName', 'lastName', 'email', 'phone', 'company', 'title', 'birthday', 'assignedTo', 'notes', 'source'
     ];
 
     allRules.forEach(rule => {
@@ -129,7 +136,8 @@ export class NormalizationService {
       changesByType: {
         email: 0,
         phone: 0,
-        name: 0,
+        firstName: 0,
+        lastName: 0,
         company: 0,
         title: 0
       },
@@ -158,7 +166,8 @@ export class NormalizationService {
         // Update changes by type
         if (change.field === 'email') stats.changesByType.email++;
         if (change.field === 'phone') stats.changesByType.phone++;
-        if (change.field === 'name') stats.changesByType.name++;
+        if (change.field === 'firstName') stats.changesByType.firstName++;
+        if (change.field === 'lastName') stats.changesByType.lastName++;
         if (change.field === 'company') stats.changesByType.company++;
         if (change.field === 'title') stats.changesByType.title++;
 
@@ -190,7 +199,8 @@ export class NormalizationService {
       changesByType: {
         email: 0,
         phone: 0,
-        name: 0,
+        firstName: 0,
+        lastName: 0,
         company: 0,
         title: 0
       },
@@ -213,7 +223,8 @@ export class NormalizationService {
       // Update changes by type
       if (change.field === 'email') stats.changesByType.email++;
       if (change.field === 'phone') stats.changesByType.phone++;
-      if (change.field === 'name') stats.changesByType.name++;
+      if (change.field === 'firstName') stats.changesByType.firstName++;
+      if (change.field === 'lastName') stats.changesByType.lastName++;
       if (change.field === 'company') stats.changesByType.company++;
       if (change.field === 'title') stats.changesByType.title++;
     });
