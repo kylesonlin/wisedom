@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Contact } from '../types/contact';
+import { Contact as BaseContact } from '../types/contact';
 import { FollowUpSuggestion } from '../utils/aiAnalysis';
 import { getScheduledFollowUps, updateFollowUpStatus } from '../utils/followUpScheduling';
 import DatePicker from './DatePicker';
@@ -11,6 +11,11 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+interface Contact extends BaseContact {
+  firstName?: string;
+  lastName?: string;
+}
 
 export default function ScheduledFollowUps() {
   const [contacts, setContacts] = useState<Contact[]>([]);

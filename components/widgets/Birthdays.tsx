@@ -10,6 +10,8 @@ interface BirthdaysProps {
 
 interface BirthdayContact extends Contact {
   daysUntilBirthday: number;
+  firstName?: string;
+  lastName?: string;
 }
 
 export default function Birthdays({ userId }: BirthdaysProps) {

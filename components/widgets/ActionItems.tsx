@@ -2,9 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { getSupabaseClient } from '../../utils/supabase';
-import { Contact } from '../../types/contact';
+import { Contact as BaseContact } from '../../types/contact';
 import { Interaction } from '../../types/interaction';
 import { ActionItem } from '../../utils/aiAnalysis';
+
+interface Contact extends BaseContact {
+  firstName?: string;
+  lastName?: string;
+}
 
 interface ActionItemsProps {
   userId: string;

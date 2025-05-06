@@ -16,6 +16,8 @@ export interface Contact {
   additionalFields?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface Interaction {
