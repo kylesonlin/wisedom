@@ -38,7 +38,8 @@ const notificationOptions = [
 export default function FormComponentsExample() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     priority: 'medium',
@@ -54,7 +55,8 @@ export default function FormComponentsExample() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const validationResult = validateForm(formData, {
-      name: { required: true, minLength: 2 },
+      firstName: { required: true, minLength: 2 },
+      lastName: { required: true, minLength: 2 },
       email: validationRules.email,
       password: validationRules.password,
       description: { required: true, minLength: 10 },
@@ -85,13 +87,23 @@ export default function FormComponentsExample() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <Input
-                label="Name"
-                placeholder="Enter your name"
-                value={formData.name}
+                label="First Name"
+                placeholder="Enter your first name"
+                value={formData.firstName}
                 onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
+                  setFormData({ ...formData, firstName: e.target.value })
                 }
-                error={errors.name}
+                error={errors.firstName}
+              />
+
+              <Input
+                label="Last Name"
+                placeholder="Enter your last name"
+                value={formData.lastName}
+                onChange={(e) =>
+                  setFormData({ ...formData, lastName: e.target.value })
+                }
+                error={errors.lastName}
               />
 
               <Input
@@ -226,7 +238,7 @@ export default function FormComponentsExample() {
             <p>Your form has been submitted successfully!</p>
             <div className="mt-4 space-y-2">
               <p>
-                <span className="font-medium">Name:</span> {formData.name}
+                <span className="font-medium">Name:</span> {formData.firstName} {formData.lastName}
               </p>
               <p>
                 <span className="font-medium">Email:</span> {formData.email}

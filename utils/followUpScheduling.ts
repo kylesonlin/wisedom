@@ -84,7 +84,7 @@ export async function getScheduledFollowUps(contactId: string): Promise<FollowUp
     return (data || []).map(interaction => ({
       id: interaction.id,
       contactId: interaction.contact_id,
-      contactName: interaction.contact_name || 'Unknown Contact',
+      contactName: interaction.contact_firstName && interaction.contact_lastName ? `${interaction.contact_firstName} ${interaction.contact_lastName}`.trim() : 'Unknown Contact',
       type: interaction.type as 'email' | 'call' | 'meeting' | 'follow-up',
       priority: 'medium',
       reason: interaction.summary || 'Scheduled follow-up',

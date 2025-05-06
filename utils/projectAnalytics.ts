@@ -201,7 +201,7 @@ export function generateActionItems(
       actionItems.push({
         id: `followup-${interaction.id}`,
         type: 'follow-up',
-        title: `Follow up with ${contacts.find(c => c.id === interaction.contactId)?.name}`,
+        title: `Follow up with ${(() => { const c = contacts.find(c => c.id === interaction.contactId); return c ? `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() : '' })()}`,
         description: `Follow up regarding: ${interaction.summary}`,
         priority: interaction.priority,
         dueDate: new Date(interaction.timestamp.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 days from interaction

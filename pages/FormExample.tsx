@@ -26,7 +26,8 @@ const priorityOptions = [
 export default function FormExample() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     priority: 'medium',
   });
@@ -36,8 +37,11 @@ export default function FormExample() {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name) {
-      newErrors.name = 'Name is required';
+    if (!formData.firstName) {
+      newErrors.firstName = 'First name is required';
+    }
+    if (!formData.lastName) {
+      newErrors.lastName = 'Last name is required';
     }
     if (!formData.email) {
       newErrors.email = 'Email is required';
@@ -67,13 +71,23 @@ export default function FormExample() {
         <Card className="mt-6 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              label="Name"
-              placeholder="Enter your name"
-              value={formData.name}
+              label="First Name"
+              placeholder="Enter your first name"
+              value={formData.firstName}
               onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
+                setFormData({ ...formData, firstName: e.target.value })
               }
-              error={errors.name}
+              error={errors.firstName}
+            />
+
+            <Input
+              label="Last Name"
+              placeholder="Enter your last name"
+              value={formData.lastName}
+              onChange={(e) =>
+                setFormData({ ...formData, lastName: e.target.value })
+              }
+              error={errors.lastName}
             />
 
             <Input
@@ -111,7 +125,7 @@ export default function FormExample() {
             <p>Your form has been submitted successfully!</p>
             <div className="mt-4 space-y-2">
               <p>
-                <span className="font-medium">Name:</span> {formData.name}
+                <span className="font-medium">Name:</span> {formData.firstName} {formData.lastName}
               </p>
               <p>
                 <span className="font-medium">Email:</span> {formData.email}

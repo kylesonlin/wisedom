@@ -26,6 +26,8 @@ interface ProjectDashboardProps {
   interactions: Interaction[];
 }
 
+const getFullName = (contact: any) => `${contact?.firstName ?? ''} ${contact?.lastName ?? ''}`.trim();
+
 export default function ProjectDashboard({ userId, contacts, interactions }: ProjectDashboardProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -252,7 +254,7 @@ export default function ProjectDashboard({ userId, contacts, interactions }: Pro
                     return (
                       <div key={contact.contactId} className="border rounded p-2">
                         <div className="flex justify-between">
-                          <span className="font-medium">{contactDetails?.name}</span>
+                          <span className="font-medium">{getFullName(contactDetails)}</span>
                           <span className="text-sm text-gray-500">{contact.role}</span>
                         </div>
                         <p className="text-sm text-gray-500">{contactDetails?.company}</p>

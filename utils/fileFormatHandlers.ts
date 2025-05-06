@@ -15,7 +15,8 @@ const csvHandler: FileFormatHandler = {
       const values = line.split(',').map(v => v.trim());
       const contact: Partial<Contact> = {
         id: crypto.randomUUID(),
-        name: '',
+        firstName: '',
+        lastName: '',
         email: '',
         createdAt: new Date(),
         updatedAt: new Date()
@@ -27,7 +28,14 @@ const csvHandler: FileFormatHandler = {
         
         switch (header) {
           case 'name':
-            contact.name = value;
+            if (value.includes(' ')) {
+              const [firstName, ...rest] = value.split(' ');
+              contact.firstName = firstName;
+              contact.lastName = rest.join(' ');
+            } else {
+              contact.firstName = value;
+              contact.lastName = '';
+            }
             break;
           case 'email':
             contact.email = value;
@@ -80,7 +88,8 @@ const jsonHandler: FileFormatHandler = {
       if (Array.isArray(data)) {
         return data.map(item => ({
           id: crypto.randomUUID(),
-          name: item.name || '',
+          firstName: item.name || '',
+          lastName: '',
           email: item.email || '',
           phone: item.phone,
           company: item.company,
@@ -122,7 +131,8 @@ const vCardHandler: FileFormatHandler = {
       
       const contact: Partial<Contact> = {
         id: crypto.randomUUID(),
-        name: '',
+        firstName: '',
+        lastName: '',
         email: '',
         createdAt: new Date(),
         updatedAt: new Date()
@@ -135,7 +145,14 @@ const vCardHandler: FileFormatHandler = {
         
         switch (key.toUpperCase()) {
           case 'FN':
-            contact.name = value;
+            if (value.includes(' ')) {
+              const [firstName, ...rest] = value.split(' ');
+              contact.firstName = firstName;
+              contact.lastName = rest.join(' ');
+            } else {
+              contact.firstName = value;
+              contact.lastName = '';
+            }
             break;
           case 'EMAIL':
             contact.email = value;
