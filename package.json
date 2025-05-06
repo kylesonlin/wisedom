@@ -3,6 +3,8 @@
     "@supabase/supabase-js": "^2.49.4"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.2",
+    "@heroicons/react": "^2.2.0",
     "@sentry/nextjs": "^9.15.0",
     "@sentry/tracing": "^7.120.3",
     "@supabase/ssr": "^0.2.0",

@@ -159,7 +159,7 @@ export default function ScheduledFollowUps() {
           return (
             <div key={contactId} className="bg-white rounded-lg shadow-md p-6">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold">{contact.name}</h3>
+                <h3 className="text-lg font-semibold">{contact.firstName} {contact.lastName}</h3>
                 <p className="text-gray-600">{contact.company}</p>
               </div>
 

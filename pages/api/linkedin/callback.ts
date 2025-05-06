@@ -81,6 +81,8 @@ export default async function handler(
       rawData: connection,
       createdAt: now,
       updatedAt: now,
+      firstName: connection.firstName,
+      lastName: connection.lastName,
     }));
 
     // Save contacts to database

@@ -57,12 +57,12 @@ export default function ActionItems({ userId }: ActionItemsProps) {
             items.push({
               id: `birthday-${contact.id}`,
               type: 'birthday',
-              title: `${contact.name}'s Birthday`,
+              title: `${contact.firstName} ${contact.lastName}'s Birthday`,
               description: `Birthday in ${daysUntilBirthday} days`,
               priority: daysUntilBirthday <= 3 ? 'high' : 'medium',
               dueDate: new Date(today.getFullYear(), birthday.getMonth(), birthday.getDate()),
               contactId: contact.id,
-              contactName: contact.name,
+              contactName: `${contact.firstName} ${contact.lastName}`,
               status: 'pending',
               completed: false
             });
@@ -83,12 +83,12 @@ export default function ActionItems({ userId }: ActionItemsProps) {
             items.push({
               id: `followup-${contact.id}`,
               type: 'follow-up',
-              title: `Follow up with ${contact.name}`,
+              title: `Follow up with ${contact.firstName} ${contact.lastName}`,
               description: `No interaction in ${daysSinceLastInteraction} days`,
               priority: 'high',
               dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
               contactId: contact.id,
-              contactName: contact.name,
+              contactName: `${contact.firstName} ${contact.lastName}`,
               status: 'pending',
               completed: false
             });

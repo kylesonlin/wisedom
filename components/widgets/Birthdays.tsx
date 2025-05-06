@@ -96,7 +96,7 @@ export default function Birthdays({ userId }: BirthdaysProps) {
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-medium">{contact.name}</h3>
+                  <h3 className="font-medium">{contact.firstName} {contact.lastName}</h3>
                   <p className="text-sm text-gray-600">
                     {contact.daysUntilBirthday === 0
                       ? "Today!"

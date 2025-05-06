@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import MainLayout from '../../components/MainLayout';
 import Papa from 'papaparse';
 import { createClient } from '@supabase/supabase-js';
@@ -23,6 +23,8 @@ const contactFields = [
   { label: 'LinkedIn', value: 'linkedin' },
   { label: 'Date of Connection', value: 'date_of_connection' },
   { label: 'Secondary Phone Number', value: 'secondary_phone' },
+  { label: 'First Name', value: 'firstName' },
+  { label: 'Last Name', value: 'lastName' },
 ];
 
 export default function ImportContactsClient() {
@@ -40,6 +42,7 @@ export default function ImportContactsClient() {
   const [timedOut, setTimedOut] = useState(false);
   const progressRef = useRef(0);
   const router = useRouter();
+  const [displayEstTime, setDisplayEstTime] = useState<string | null>(null);
 
   // Magic mapping: try to auto-map known fields
   React.useEffect(() => {
@@ -68,6 +71,27 @@ export default function ImportContactsClient() {
       return () => clearInterval(interval);
     }
   }, [step, lastProgressTime]);
+
+  // Smoother time remaining update
+  useEffect(() => {
+    if (step === 'import' && startTime && progress > 0 && progress < 100) {
+      const interval = setInterval(() => {
+        const elapsed = (Date.now() - startTime) / 1000;
+        const estTotal = elapsed / (progress / 100);
+        const estLeft = estTotal - elapsed;
+        if (estLeft > 0) {
+          const mins = Math.floor(estLeft / 60);
+          const secs = Math.round(estLeft % 60);
+          setDisplayEstTime(`${mins > 0 ? mins + 'm ' : ''}${secs}s remaining`);
+        } else {
+          setDisplayEstTime(null);
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setDisplayEstTime(null);
+    }
+  }, [step, startTime, progress]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -112,20 +136,21 @@ export default function ImportContactsClient() {
         const contact: any = {
           additionalFields: {},
         };
-        // Magic mapping for known fields
         contactFields.forEach(field => {
           const csvCol = mapping[field.value] || headers.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === field.label.toLowerCase().replace(/[^a-z0-9]/g, ''));
           if (csvCol && row[csvCol]) {
-            if (field.value === 'name' && (csvCol.includes('First') && csvCol.includes('Last'))) {
-              contact.name = `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim();
-            } else if (['email', 'phone', 'company', 'title'].includes(field.value)) {
+            if (field.value === 'firstName' && csvCol.toLowerCase().includes('first')) {
+              contact.firstName = row[csvCol] || '';
+            }
+            if (field.value === 'lastName' && csvCol.toLowerCase().includes('last')) {
+              contact.lastName = row[csvCol] || '';
+            } else if (['email', 'phone', 'company', 'title', 'linkedin'].includes(field.value)) {
               contact[field.value] = row[csvCol];
             } else {
               contact.additionalFields[field.value] = row[csvCol];
             }
           }
         });
-        // Store all unmapped columns in additionalFields
         headers.forEach(header => {
           const isMapped = Object.values(mapping).includes(header) || contactFields.some(f => header.toLowerCase().replace(/[^a-z0-9]/g, '') === f.label.toLowerCase().replace(/[^a-z0-9]/g, ''));
           if (!isMapped && row[header]) {
@@ -134,13 +159,50 @@ export default function ImportContactsClient() {
         });
         contact.createdAt = new Date().toISOString();
         contact.updatedAt = new Date().toISOString();
-        const { error } = await supabase.from('contacts').insert([contact]);
-        if (error) {
-          failed++;
-          errors.push(`Row: ${JSON.stringify(row)} | Error: ${error.message}`);
-          console.error('Supabase insert error:', error, 'Row:', row);
+
+        // Deduplication logic
+        let match = null;
+        if (contact.email) {
+          const { data: emailMatch } = await supabase.from('contacts').select('*').eq('email', contact.email).maybeSingle();
+          if (emailMatch) match = emailMatch;
+        }
+        if (!match && contact.phone) {
+          const { data: phoneMatch } = await supabase.from('contacts').select('*').eq('phone', contact.phone).maybeSingle();
+          if (phoneMatch) match = phoneMatch;
+        }
+        if (!match && contact.linkedin) {
+          const { data: linkedinMatch } = await supabase.from('contacts').select('*').eq('linkedin', contact.linkedin).maybeSingle();
+          if (linkedinMatch) match = linkedinMatch;
+        }
+
+        if (match) {
+          // Merge: update only fields that are empty/null in the existing contact
+          const updatedContact = { ...match };
+          for (const key of Object.keys(contact)) {
+            if ((match[key] === null || match[key] === '' || typeof match[key] === 'undefined') && contact[key]) {
+              updatedContact[key] = contact[key];
+            }
+          }
+          // Merge additionalFields
+          updatedContact.additionalFields = { ...match.additionalFields, ...contact.additionalFields };
+          updatedContact.updatedAt = new Date().toISOString();
+          const { error } = await supabase.from('contacts').update(updatedContact).eq('id', match.id);
+          if (error) {
+            failed++;
+            errors.push(`Row: ${JSON.stringify(row)} | Error: ${error.message}`);
+            console.error('Supabase update error:', error, 'Row:', row);
+          } else {
+            success++;
+          }
         } else {
-          success++;
+          const { error } = await supabase.from('contacts').insert([contact]);
+          if (error) {
+            failed++;
+            errors.push(`Row: ${JSON.stringify(row)} | Error: ${error.message}`);
+            console.error('Supabase insert error:', error, 'Row:', row);
+          } else {
+            success++;
+          }
         }
       } catch (e: any) {
         failed++;
@@ -159,15 +221,6 @@ export default function ImportContactsClient() {
       router.push('/rolodex');
     }
   };
-
-  // Estimate time remaining
-  let estTime = null;
-  if (step === 'import' && startTime && progress > 0 && progress < 100) {
-    const elapsed = (Date.now() - startTime) / 1000; // seconds
-    const estTotal = elapsed / (progress / 100);
-    const estLeft = estTotal - elapsed;
-    estTime = estLeft > 0 ? `${Math.round(estLeft)}s remaining` : null;
-  }
 
   return (
     <MainLayout>
@@ -228,7 +281,7 @@ export default function ImportContactsClient() {
                 style={{ width: `${progress}%`, transition: 'width 0.3s' }}
               />
             </div>
-            <div className="mb-2 text-sm text-gray-600">{progress}% {estTime && `- ${estTime}`}</div>
+            <div className="mb-2 text-sm text-gray-600">{progress}% {displayEstTime && `- ${displayEstTime}`}</div>
             <div className="flex items-center justify-center mt-2">
               <span className="inline-block w-6 h-6 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
             </div>
