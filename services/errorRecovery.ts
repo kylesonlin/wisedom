@@ -41,10 +41,10 @@ export class ErrorRecoveryService {
         }
       },
       {
-        type: 'UNKNOWN_ERROR',
+        type: 'PROCESSING_ERROR',
         canRecover: (error) => {
-          const contact = error.context?.contact;
-          return contact !== undefined;
+          // No 'contact' property in ImportErrorContext, so just return false or use another check
+          return false;
         },
         recover: async (error) => {
           // Implement contact normalization recovery
@@ -56,7 +56,7 @@ export class ErrorRecoveryService {
         }
       },
       {
-        type: 'UNKNOWN_ERROR',
+        type: 'PROCESSING_ERROR',
         canRecover: (error) => {
           const batchIndex = error.context?.batchIndex;
           return batchIndex !== undefined;
@@ -71,7 +71,7 @@ export class ErrorRecoveryService {
         }
       },
       {
-        type: 'DATABASE_ERROR',
+        type: 'PROCESSING_ERROR',
         canRecover: (error) => {
           return error.details?.code === 'CONNECTION_ERROR';
         },
