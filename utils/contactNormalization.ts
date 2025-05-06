@@ -9,27 +9,27 @@ interface NormalizedContact extends Contact {
 }
 
 // Helper function to clean and standardize email addresses
-export const normalizeEmail = (email: string): string => {
+export function normalizeEmail(email: string): string {
   if (!email) return '';
   return email.toLowerCase().trim();
-};
+}
 
 // Helper function to clean and standardize phone numbers
-export const normalizePhone = (phone: string): string => {
+export function normalizePhone(phone: string): string {
   if (!phone) return '';
-  // Remove all non-numeric characters
-  return phone.replace(/\D/g, '');
-};
+  return phone
+    .replace(/[^\d+]/g, '')
+    .toLowerCase();
+}
 
 // Helper function to clean and standardize names
-export const normalizeName = (name: string): string => {
+export function normalizeName(name: string): string {
   if (!name) return '';
   return name
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-    .replace(/[^\w\s]/g, ''); // Remove special characters
-};
+    .replace(/\s+/g, ' ');
+}
 
 // Function to calculate similarity between two strings
 const calculateSimilarity = (str1: string, str2: string): number => {
@@ -201,3 +201,19 @@ export const normalizeContacts = (contacts: Contact[]): NormalizedContact[] => {
       //   normalizedAnalysis.relationshipStrength = (analysis.relationshipStrength as number);
       // }
 // ... existing code ... 
+
+export function areNamesSimilar(str1: string, str2: string): boolean {
+  if (!str1 || !str2) return false;
+  const s1 = str1.toLowerCase();
+  const s2 = str2.toLowerCase();
+  return s1 === s2 || s1.includes(s2) || s2.includes(s1);
+}
+
+export function normalizeCompany(company: string): string {
+  if (!company) return '';
+  let s1 = company.trim();
+  let s2 = company.trim();
+  s1 = s1.toLowerCase();
+  s2 = s2.toLowerCase();
+  return s1 === s2 ? s1 : company;
+} 

@@ -48,7 +48,9 @@ export default function ImportContactsClient() {
     if (step === 'map' && headers.length > 0) {
       const autoMapping: { [key: string]: string } = {};
       contactFields.forEach(field => {
-        const match = headers.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === field.label.toLowerCase().replace(/[^a-z0-9]/g, ''));
+        const match = headers.find(h => 
+          h?.toLowerCase().replace(/[^a-z0-9]/g, '') === field.label?.toLowerCase().replace(/[^a-z0-9]/g, '')
+        );
         if (match) autoMapping[field.value] = match;
       });
       setMapping(autoMapping);
@@ -136,12 +138,14 @@ export default function ImportContactsClient() {
           additionalFields: {},
         };
         contactFields.forEach(field => {
-          const csvCol = mapping[field.value] || headers.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === field.label.toLowerCase().replace(/[^a-z0-9]/g, ''));
+          const csvCol = mapping[field.value] || headers.find(h => 
+            h?.toLowerCase().replace(/[^a-z0-9]/g, '') === field.label?.toLowerCase().replace(/[^a-z0-9]/g, '')
+          );
           if (csvCol && row[csvCol]) {
-            if (field.value === 'firstName' && csvCol.toLowerCase().includes('first')) {
+            if (field.value === 'firstName' && csvCol?.toLowerCase().includes('first')) {
               contact.firstName = row[csvCol] || '';
             }
-            if (field.value === 'lastName' && csvCol.toLowerCase().includes('last')) {
+            if (field.value === 'lastName' && csvCol?.toLowerCase().includes('last')) {
               contact.lastName = row[csvCol] || '';
             } else if (['email', 'phone', 'company', 'title', 'linkedin'].includes(field.value)) {
               contact[field.value] = row[csvCol];
@@ -151,7 +155,10 @@ export default function ImportContactsClient() {
           }
         });
         headers.forEach(header => {
-          const isMapped = Object.values(mapping).includes(header) || contactFields.some(f => header.toLowerCase().replace(/[^a-z0-9]/g, '') === f.label.toLowerCase().replace(/[^a-z0-9]/g, ''));
+          const isMapped = Object.values(mapping).includes(header) || 
+            contactFields.some(f => 
+              header?.toLowerCase().replace(/[^a-z0-9]/g, '') === f.label?.toLowerCase().replace(/[^a-z0-9]/g, '')
+            );
           if (!isMapped && row[header]) {
             contact.additionalFields[header] = row[header];
           }

@@ -32,18 +32,21 @@ export function filterContacts(
   priorityScores: Record<string, PriorityScore>,
   interactionAnalyses: Record<string, InteractionAnalysis>
 ): Contact[] {
+  if (!contacts) return [];
+  
   return contacts.filter(contact => {
     if (!contact.id) return false;
 
     // Search term filter
     if (filterOptions.searchTerm) {
-      const searchTerm = filterOptions.searchTerm.toLowerCase();
-      const matchesSearch =
-        getFullName(contact).toLowerCase().includes(searchTerm) ||
+      const searchTerm = filterOptions.searchTerm?.toLowerCase() ?? '';
+      const matches = 
+        getFullName(contact)?.toLowerCase().includes(searchTerm) ||
         contact.company?.toLowerCase().includes(searchTerm) ||
         contact.email?.toLowerCase().includes(searchTerm) ||
         contact.title?.toLowerCase().includes(searchTerm);
-      if (!matchesSearch) return false;
+      
+      if (!matches) return false;
     }
 
     // Timeframe filter

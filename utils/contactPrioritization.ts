@@ -66,7 +66,7 @@ function calculateImportanceScore(
   // Company size and role importance
   if (contact.company) {
     score += 0.2;
-    if (contact.title?.toLowerCase().includes('ceo') || 
+    if (contact.title?.toLowerCase().includes('ceo') ||
         contact.title?.toLowerCase().includes('founder')) {
       score += 0.3;
     }
@@ -81,7 +81,7 @@ function calculateImportanceScore(
   const importantTopics = ['partnership', 'deal', 'investment', 'collaboration'];
   const topicScore = interactions.reduce((sum, i) => {
     const matchingTopics = (i.topics || []).filter(t => 
-      importantTopics.some(it => t.toLowerCase().includes(it))
+      importantTopics.some(it => t?.toLowerCase().includes(it))
     ).length;
     return sum + matchingTopics;
   }, 0) / (interactions.length || 1);

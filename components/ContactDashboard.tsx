@@ -131,10 +131,10 @@ export default function ContactDashboard({ initialView = 'list' }: ContactDashbo
   const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
 
   const filteredContacts = contacts.filter(contact => {
-    const searchLower = searchQuery.toLowerCase();
+    const searchLower = searchQuery?.toLowerCase() ?? '';
     return (
-      getFullName(contact).toLowerCase().includes(searchLower) ||
-      contact.email.toLowerCase().includes(searchLower) ||
+      getFullName(contact)?.toLowerCase().includes(searchLower) ||
+      contact.email?.toLowerCase().includes(searchLower) ||
       (contact.company?.toLowerCase().includes(searchLower) ?? false) ||
       (contact.phone?.toLowerCase().includes(searchLower) ?? false)
     );
@@ -182,7 +182,14 @@ export default function ContactDashboard({ initialView = 'list' }: ContactDashbo
   };
 
   if (loading) {
-    return <div>Loading contacts...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Loading contacts...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {

@@ -98,7 +98,7 @@ function extractActionItems(text: string): string[] {
   const actionWords = ['need', 'should', 'must', 'will', 'going to'];
   const sentences = text.split(/[.,!?]/);
   return sentences
-    .filter(sentence => actionWords.some(word => sentence.toLowerCase().includes(word)))
+    .filter(sentence => actionWords.some(word => sentence?.toLowerCase().includes(word)))
     .slice(0, 3);
 }
 

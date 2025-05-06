@@ -6,10 +6,14 @@ import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Modal from '@/components/Modal';
 import ContactForm from '@/components/ContactForm';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface Contact {
   id: string;
@@ -28,37 +32,33 @@ interface Contact {
 export default function RolodexClient() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | undefined>();
 
-  useEffect(() => {
-    fetchContacts();
-  }, []);
-
   const fetchContacts = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const { data, error } = await supabase
         .from('contacts')
         .select('*')
-        .order('lastName', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      const normalizedContacts = data.map((contact: any) => ({
-        ...contact,
-        createdAt: contact.createdAt || contact.created_at,
-        updatedAt: contact.updatedAt || contact.updated_at,
-      }));
-
-      setContacts(normalizedContacts);
+      setContacts(data || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error fetching contacts:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch contacts');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchContacts();
+  }, [supabase]);
 
   const handleAddContact = () => {
     setSelectedContact(undefined);
@@ -98,18 +98,43 @@ export default function RolodexClient() {
   };
 
   const filteredContacts = contacts.filter(contact => {
-    const searchLower = searchQuery.toLowerCase();
+    const searchLower = searchQuery?.toLowerCase() ?? '';
     return (
-      contact.firstName.toLowerCase().includes(searchLower) ||
-      contact.lastName.toLowerCase().includes(searchLower) ||
-      contact.email.toLowerCase().includes(searchLower) ||
+      contact.firstName?.toLowerCase().includes(searchLower) ||
+      contact.lastName?.toLowerCase().includes(searchLower) ||
+      contact.email?.toLowerCase().includes(searchLower) ||
       contact.company?.toLowerCase().includes(searchLower) ||
       contact.title?.toLowerCase().includes(searchLower)
     );
   });
 
-  if (isLoading) return <div>Loading contacts...</div>;
-  if (error) return <div className="text-red-600">Error: {error}</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading contacts...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

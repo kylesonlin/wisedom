@@ -9,7 +9,7 @@ interface FileFormatHandler {
 const csvHandler: FileFormatHandler = {
   parse: (content: string): Contact[] => {
     const lines = content.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const headers = lines[0].split(',').map(h => h?.trim().toLowerCase() ?? '');
     
     return lines.slice(1).map(line => {
       const values = line.split(',').map(v => v.trim());
@@ -73,8 +73,11 @@ const csvHandler: FileFormatHandler = {
     const lines = content.split('\n');
     if (lines.length < 2) return false;
     
-    const headers = lines[0].split(',').map(h => h.trim());
-    return headers.length > 0 && (headers.some(h => h.toLowerCase() === 'firstname') || headers.some(h => h.toLowerCase() === 'lastName'));
+    const headers = lines[0].split(',').map(h => h?.trim().toLowerCase() ?? '');
+    return headers.length > 0 && (
+      headers.some(h => h?.toLowerCase() === 'firstname') || 
+      headers.some(h => h?.toLowerCase() === 'lastName')
+    );
   }
 };
 

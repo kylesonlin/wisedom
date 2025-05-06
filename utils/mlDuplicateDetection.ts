@@ -225,4 +225,32 @@ export const groupSimilarContacts = (
   }
 
   return groups;
-}; 
+};
+
+function compareEmails(email1: string, email2: string): number {
+  if (!email1 || !email2) return 0;
+  
+  const domain1 = email1.split('@')[1]?.toLowerCase();
+  const domain2 = email2.split('@')[1]?.toLowerCase();
+  
+  if (domain1 === domain2) return 1;
+  return 0;
+}
+
+function compareNames(name1: string, name2: string): number {
+  if (!name1 || !name2) return 0;
+  
+  const tokens1 = name1.toLowerCase().split(/\s+/);
+  const tokens2 = name2.toLowerCase().split(/\s+/);
+  
+  // Calculate similarity based on common tokens
+  const commonTokens = tokens1.filter(token => tokens2.includes(token));
+  return commonTokens.length / Math.max(tokens1.length, tokens2.length);
+}
+
+function normalizeText(text: string): string {
+  if (!text) return '';
+  return text
+    .trim()
+    .toLowerCase();
+} 
