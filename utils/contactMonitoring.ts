@@ -23,6 +23,8 @@ export interface ContactPriority {
   upcomingEvents: number;
 }
 
+const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+
 export function monitorContactUpdates(
   contacts: Contact[],
   interactions: Interaction[],
@@ -142,7 +144,7 @@ export function generatePriorityActionItems(
       actionItems.push({
         id: `update-${update.contactId}-${update.timestamp.getTime()}`,
         type: 'follow-up',
-        title: `Follow up with ${contact.name}`,
+        title: `Follow up with ${getFullName(contact)}`,
         description: update.details,
         priority: 'high',
         dueDate: new Date(update.timestamp.getTime() + 24 * 60 * 60 * 1000), // 24 hours
@@ -159,7 +161,7 @@ export function generatePriorityActionItems(
       actionItems.push({
         id: `update-${update.contactId}-${update.timestamp.getTime()}`,
         type: 'follow-up',
-        title: `Follow up with ${contact.name}`,
+        title: `Follow up with ${getFullName(contact)}`,
         description: update.details,
         priority: 'medium',
         dueDate: new Date(update.timestamp.getTime() + 72 * 60 * 60 * 1000), // 72 hours
@@ -176,7 +178,7 @@ export function generatePriorityActionItems(
       actionItems.push({
         id: `relationship-${contact.id}`,
         type: 'meeting',
-        title: `Build relationship with ${contact.name}`,
+        title: `Build relationship with ${getFullName(contact)}`,
         description: 'Schedule a check-in to strengthen the relationship',
         priority: 'medium',
         dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days

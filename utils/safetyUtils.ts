@@ -108,8 +108,9 @@ export const isPotentialDuplicate = (contactA: Contact, contactB: Contact): bool
   
   const emailMatch = Boolean(contactA.email) && Boolean(contactB.email) && contactA.email === contactB.email;
   const phoneMatch = Boolean(contactA.phone) && Boolean(contactB.phone) && contactA.phone === contactB.phone;
-  const nameMatch = Boolean(contactA.name) && Boolean(contactB.name) && 
-    contactA.name.trim().toLowerCase() === contactB.name.trim().toLowerCase();
+  const getFullName = (contact: any) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+  const nameMatch = Boolean(getFullName(contactA)) && Boolean(getFullName(contactB)) &&
+    getFullName(contactA).trim().toLowerCase() === getFullName(contactB).trim().toLowerCase();
   
   return emailMatch || phoneMatch || (nameMatch && Boolean(contactA.email || contactA.phone) && Boolean(contactB.email || contactB.phone));
 }; 

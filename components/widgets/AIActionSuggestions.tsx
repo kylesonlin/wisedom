@@ -57,7 +57,7 @@ export default function AIActionSuggestions({ userId }: AIActionSuggestionsProps
             suggestions.push({
               id: `followup-${contact.id}-${Date.now()}`,
               contactId: contact.id,
-              contactName: contact.name,
+              contactName: `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim(),
               type: 'follow-up',
               priority: 'high',
               reason: `No interaction in ${daysSinceLastInteraction} days`,

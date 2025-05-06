@@ -19,6 +19,8 @@ export const DEFAULT_PRIORITY_FACTORS: PriorityFactors = {
 
 export type { FollowUpSuggestion };
 
+const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+
 // Calculate priority score based on various factors
 export function calculatePriorityScore(
   contact: Contact,
@@ -158,7 +160,7 @@ export function generateFollowUpSuggestions(
     suggestions.push({
       id: `check-in-${contact.id}`,
       contactId: contact.id,
-      contactName: contact.name,
+      contactName: getFullName(contact),
       type: 'email',
       priority: priorityScore > 0.7 ? 'high' : priorityScore > 0.4 ? 'medium' : 'low',
       reason: 'No recent interactions',
@@ -176,7 +178,7 @@ export function generateFollowUpSuggestions(
       suggestions.push({
         id: `follow-up-${contact.id}`,
         contactId: contact.id,
-        contactName: contact.name,
+        contactName: getFullName(contact),
         type: lastInteraction.type === 'email' ? 'call' : 'email',
         priority: priorityScore > 0.7 ? 'high' : priorityScore > 0.4 ? 'medium' : 'low',
         reason: `Last contact was ${daysSinceLastContact} days ago`,
@@ -252,7 +254,7 @@ function generateFollowUpReason(
   priorityScore: PriorityScore
 ): string {
   if (!lastInteraction) {
-    return `Initial outreach to ${contact.name || 'contact'}`;
+    return `Initial outreach to ${getFullName(contact) || 'contact'}`;
   }
 
   const daysAgo = Math.floor(

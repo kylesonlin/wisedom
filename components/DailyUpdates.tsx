@@ -55,6 +55,8 @@ export default function DailyUpdates({ contacts, interactions }: DailyUpdatesPro
   const birthdays = updates.filter(update => update.type === 'birthday');
   const recentInteractions = updates.filter(update => update.type === 'interaction');
 
+  const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+
   return (
     <div className="p-4 space-y-6">
       {/* Daily Overview */}
@@ -95,7 +97,7 @@ export default function DailyUpdates({ contacts, interactions }: DailyUpdatesPro
                 return (
                   <div key={update.contactId} className="flex justify-between items-center p-2 border rounded">
                     <div>
-                      <div className="font-medium">{contact.name}</div>
+                      <div className="font-medium">{getFullName(contact)}</div>
                       <div className="text-sm text-muted-foreground">{update.details}</div>
                     </div>
                     <Badge variant={update.priority === 'high' ? 'error' : 'warning'}>
@@ -125,7 +127,7 @@ export default function DailyUpdates({ contacts, interactions }: DailyUpdatesPro
                   <div key={`${update.contactId}-${update.timestamp.getTime()}`} 
                        className="flex justify-between items-center p-2 border rounded">
                     <div>
-                      <div className="font-medium">{contact.name}</div>
+                      <div className="font-medium">{getFullName(contact)}</div>
                       <div className="text-sm text-muted-foreground">{update.details}</div>
                     </div>
                     <Badge variant={

@@ -24,12 +24,12 @@ const extractFeatures = (contact1: Contact, contact2: Contact): ContactFeatures 
   return {
     emailSimilarity: calculateEmailSimilarity(contact1.email, contact2.email),
     phoneSimilarity: calculatePhoneSimilarity(contact1.phone, contact2.phone),
-    nameSimilarity: calculateNameSimilarity(contact1.name, contact2.name),
+    nameSimilarity: calculateNameSimilarity(getFullName(contact1), getFullName(contact2)),
     companySimilarity: calculateCompanySimilarity(contact1.company, contact2.company),
     titleSimilarity: calculateTitleSimilarity(contact1.title, contact2.title),
-    phoneticNameSimilarity: calculatePhoneticSimilarity(contact1.name, contact2.name),
+    phoneticNameSimilarity: calculatePhoneticSimilarity(getFullName(contact1), getFullName(contact2)),
     emailDomainSimilarity: calculateEmailDomainSimilarity(contact1.email, contact2.email),
-    nameTokenSimilarity: calculateNameTokenSimilarity(contact1.name, contact2.name)
+    nameTokenSimilarity: calculateNameTokenSimilarity(getFullName(contact1), getFullName(contact2))
   };
 };
 
@@ -130,6 +130,8 @@ const getPhoneticRepresentation = (name: string): string => {
     .replace(/[aeiou]/g, '')
     .replace(/(.)\1+/g, '$1');
 };
+
+const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
 
 // Weight configuration for different features
 const featureWeights: Record<keyof ContactFeatures, number> = {

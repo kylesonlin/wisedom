@@ -25,6 +25,8 @@ interface BatchProcessorResult {
 
 type ProcessingStage = 'parsing' | 'normalizing' | 'deduplicating' | 'saving';
 
+const getFullName = (contact: any) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+
 export class BatchProcessor {
   private batchSize: number;
   private similarityThreshold: number;
@@ -79,7 +81,7 @@ export class BatchProcessor {
       normalizedBatch.forEach(contact => {
         if (contact.email?.includes('normalized')) normalizationStats.emailsNormalized++;
         if (contact.phone?.includes('normalized')) normalizationStats.phonesNormalized++;
-        if (contact.name?.includes('normalized')) normalizationStats.namesNormalized++;
+        if (getFullName(contact).includes('normalized')) normalizationStats.namesNormalized++;
       });
       
       this.onNormalizationComplete?.(normalizedBatch);
@@ -168,10 +170,10 @@ export class BatchProcessor {
       }
 
       // Merge names if different
-      if (current.name && current.name !== merged.name) {
+      if (getFullName(current) !== getFullName(merged)) {
         merged.name = merged.name
-          ? `${merged.name} (${current.name})`
-          : current.name;
+          ? `${merged.name} (${getFullName(current)})`
+          : getFullName(current);
       }
 
       // Merge additional fields

@@ -69,7 +69,7 @@ export default function RelationshipStrength({ userId }: RelationshipStrengthPro
 
           relationshipMetrics.push({
             contactId: contact.id,
-            contactName: contact.name,
+            contactName: `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim(),
             strength,
             lastInteraction: new Date(lastInteraction.timestamp),
             interactionCount: contactInteractions.length,

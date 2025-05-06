@@ -96,6 +96,8 @@ export default function ContactPrioritization() {
     }
   };
 
+  const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+
   if (loading) {
     return <div>Loading contacts and interactions...</div>;
   }
@@ -129,7 +131,7 @@ export default function ContactPrioritization() {
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-medium">{contact.name}</h3>
+                  <h3 className="font-medium">{getFullName(contact)}</h3>
                   {contact.company && (
                     <p className="text-sm text-gray-600">{contact.company}</p>
                   )}

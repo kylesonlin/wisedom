@@ -23,6 +23,8 @@ export interface SortOptions {
   direction: 'asc' | 'desc';
 }
 
+const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+
 export function filterContacts(
   contacts: Contact[],
   interactions: Interaction[],
@@ -37,7 +39,7 @@ export function filterContacts(
     if (filterOptions.searchTerm) {
       const searchTerm = filterOptions.searchTerm.toLowerCase();
       const matchesSearch =
-        contact.name?.toLowerCase().includes(searchTerm) ||
+        getFullName(contact).toLowerCase().includes(searchTerm) ||
         contact.company?.toLowerCase().includes(searchTerm) ||
         contact.email?.toLowerCase().includes(searchTerm) ||
         contact.title?.toLowerCase().includes(searchTerm);
@@ -167,7 +169,7 @@ export function sortContacts(
         break;
 
       case 'name':
-        comparison = (a.name || '').localeCompare(b.name || '');
+        comparison = getFullName(a).localeCompare(getFullName(b));
         break;
 
       case 'company':

@@ -128,10 +128,12 @@ export default function ContactDashboard({ initialView = 'list' }: ContactDashbo
     loadSavedViews();
   }, []);
 
+  const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+
   const filteredContacts = contacts.filter(contact => {
     const searchLower = searchQuery.toLowerCase();
     return (
-      contact.name.toLowerCase().includes(searchLower) ||
+      getFullName(contact).toLowerCase().includes(searchLower) ||
       contact.email.toLowerCase().includes(searchLower) ||
       (contact.company?.toLowerCase().includes(searchLower) ?? false) ||
       (contact.phone?.toLowerCase().includes(searchLower) ?? false)
@@ -227,7 +229,7 @@ export default function ContactDashboard({ initialView = 'list' }: ContactDashbo
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-medium">{contact.name}</h3>
+                  <h3 className="font-medium">{getFullName(contact)}</h3>
                   <p className="text-sm text-gray-600">{contact.email}</p>
                   {contact.company && (
                     <p className="text-sm text-gray-500">{contact.company}</p>
@@ -249,7 +251,7 @@ export default function ContactDashboard({ initialView = 'list' }: ContactDashbo
           <h2 className="text-xl font-semibold mb-4">Contact Details</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p><span className="font-medium">Name:</span> {selectedContact.name}</p>
+              <p><span className="font-medium">Name:</span> {getFullName(selectedContact)}</p>
               <p><span className="font-medium">Email:</span> {selectedContact.email}</p>
               {selectedContact.phone && (
                 <p><span className="font-medium">Phone:</span> {selectedContact.phone}</p>

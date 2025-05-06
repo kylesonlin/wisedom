@@ -75,11 +75,12 @@ export const findPotentialDuplicates = (
   contacts: Contact[],
   threshold = 0.8
 ): Map<string, Contact[]> => {
+  const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
   const normalizedContacts = contacts.map(contact => ({
     ...contact,
     normalizedEmail: normalizeEmail(contact.email ? contact.email : ''),
     normalizedPhone: normalizePhone(contact.phone ? contact.phone : ''),
-    normalizedName: normalizeName(contact.name ? contact.name : '')
+    normalizedName: normalizeName(getFullName(contact)),
   }));
 
   const duplicates = new Map<string, Contact[]>();
@@ -161,10 +162,9 @@ export const mergeDuplicateContacts = (duplicates: Contact[]): Contact => {
     }
 
     // Merge names if different
-    if (current.name && current.name !== merged.name) {
-      merged.name = merged.name
-        ? `${merged.name} (${current.name})`
-        : current.name;
+    if (current.firstName && current.lastName && (current.firstName !== merged.firstName || current.lastName !== merged.lastName)) {
+      merged.firstName = merged.firstName || current.firstName;
+      merged.lastName = merged.lastName || current.lastName;
     }
 
     // Merge additional fields if they exist
@@ -181,14 +181,13 @@ export const mergeDuplicateContacts = (duplicates: Contact[]): Contact => {
 
 // Function to normalize a single contact
 export const normalizeContact = (contact: Contact): NormalizedContact => {
+  const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
   return {
     ...contact,
     email: normalizeEmail(contact.email ? contact.email : ''),
     phone: normalizePhone(contact.phone ? contact.phone : ''),
-    name: normalizeName(contact.name ? contact.name : ''),
     normalizedEmail: normalizeEmail(contact.email ? contact.email : ''),
     normalizedPhone: normalizePhone(contact.phone ? contact.phone : ''),
-    normalizedName: normalizeName(contact.name ? contact.name : '')
   };
 };
 
