@@ -168,7 +168,7 @@ export class BatchProcessingService {
       normalizationStats: {
         emailsNormalized: normalizationStats.changesByType.email,
         phonesNormalized: normalizationStats.changesByType.phone,
-        namesNormalized: normalizationStats.changesByType.name
+        namesNormalized: normalizationStats.changesByType.firstName + normalizationStats.changesByType.lastName
       },
       batchStats
     };
