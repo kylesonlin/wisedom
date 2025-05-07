@@ -1,4 +1,5 @@
-import { Contact, Interaction } from '../types/contact';
+import { Contact } from '../types/contact';
+import { Interaction } from '../types/interaction';
 import { PriorityScore } from './contactPrioritization';
 import { InteractionAnalysis } from './aiAnalysis';
 
@@ -51,7 +52,7 @@ export function filterContacts(
 
     // Timeframe filter
     if (filterOptions.timeframes?.length) {
-      const contactInteractions = interactions.filter(i => i.contact_id === contact.id);
+      const contactInteractions = interactions.filter(i => i.contactId === contact.id);
       const hasInteractionInTimeframe = filterOptions.timeframes.some(timeframe => {
         const timeframeMs = {
           day: 24 * 60 * 60 * 1000,
@@ -75,7 +76,7 @@ export function filterContacts(
 
     // Interaction type filter
     if (filterOptions.interactionTypes?.length) {
-      const contactInteractions = interactions.filter(i => i.contact_id === contact.id);
+      const contactInteractions = interactions.filter(i => i.contactId === contact.id);
       const hasInteractionType = filterOptions.interactionTypes.some(type =>
         contactInteractions.some(i => i.type === type)
       );
@@ -84,7 +85,7 @@ export function filterContacts(
 
     // Sentiment range filter
     if (filterOptions.sentimentRange) {
-      const contactInteractions = interactions.filter(i => i.contact_id === contact.id);
+      const contactInteractions = interactions.filter(i => i.contactId === contact.id);
       const averageSentiment =
         contactInteractions.reduce((sum, i) => sum + (i.sentiment || 0), 0) /
         (contactInteractions.length || 1);
@@ -110,7 +111,7 @@ export function filterContacts(
 
     // Pending actions filter
     if (filterOptions.hasPendingActions) {
-      const contactInteractions = interactions.filter(i => i.contact_id === contact.id);
+      const contactInteractions = interactions.filter(i => i.contactId === contact.id);
       const hasPendingAction = contactInteractions.some(
         i => i.metadata?.pendingAction || i.metadata?.followUpRequired
       );
@@ -119,7 +120,7 @@ export function filterContacts(
 
     // Scheduled follow-ups filter
     if (filterOptions.hasScheduledFollowUps) {
-      const contactInteractions = interactions.filter(i => i.contact_id === contact.id);
+      const contactInteractions = interactions.filter(i => i.contactId === contact.id);
       const hasScheduledFollowUp = contactInteractions.some(
         i => i.metadata?.scheduled
       );
@@ -161,10 +162,10 @@ export function sortContacts(
 
       case 'lastInteraction':
         const lastInteractionA = interactions
-          .filter(i => i.contact_id === a.id)
+          .filter(i => i.contactId === a.id)
           .sort((i1, i2) => new Date(i2.timestamp).getTime() - new Date(i1.timestamp).getTime())[0];
         const lastInteractionB = interactions
-          .filter(i => i.contact_id === b.id)
+          .filter(i => i.contactId === b.id)
           .sort((i1, i2) => new Date(i2.timestamp).getTime() - new Date(i1.timestamp).getTime())[0];
         const timeA = lastInteractionA ? new Date(lastInteractionA.timestamp).getTime() : 0;
         const timeB = lastInteractionB ? new Date(lastInteractionB.timestamp).getTime() : 0;
@@ -239,7 +240,7 @@ export function getFilterStats(
     }
 
     // Calculate interaction type distribution and average sentiment
-    const contactInteractions = interactions.filter(i => i.contact_id === contact.id);
+    const contactInteractions = interactions.filter(i => i.contactId === contact.id);
     contactInteractions.forEach(interaction => {
       interactionTypeDistribution[interaction.type] = (interactionTypeDistribution[interaction.type] || 0) + 1;
     });

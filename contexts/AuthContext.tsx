@@ -1,6 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getSupabaseClient } from '../utils/supabase';
-import { User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -9,9 +13,6 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  signInWithGithub: () => Promise<void>;
-  signInWithMagicLink: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,102 +22,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = getSupabaseClient();
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Check for existing session
+    const checkSession = async () => {
+      try {
+        // TODO: Implement session check
+        setLoading(false);
+      } catch (error) {
+        console.error('Session check failed:', error);
+        setLoading(false);
+      }
+    };
 
-    // Listen for changes on auth state (sign in, sign out, etc.)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    checkSession();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const supabase = getSupabaseClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
+    try {
+      // TODO: Implement sign in
+      setUser({ id: '1', email });
+    } catch (error) {
+      console.error('Sign in failed:', error);
+      throw error;
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    const supabase = getSupabaseClient();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (error) throw error;
+    try {
+      // TODO: Implement sign up
+      setUser({ id: '1', email });
+    } catch (error) {
+      console.error('Sign up failed:', error);
+      throw error;
+    }
   };
 
   const signOut = async () => {
-    const supabase = getSupabaseClient();
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      // TODO: Implement sign out
+      setUser(null);
+    } catch (error) {
+      console.error('Sign out failed:', error);
+      throw error;
+    }
   };
 
   const resetPassword = async (email: string) => {
-    const supabase = getSupabaseClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) throw error;
+    try {
+      // TODO: Implement password reset
+    } catch (error) {
+      console.error('Password reset failed:', error);
+      throw error;
+    }
   };
 
-  const signInWithGoogle = async () => {
-    const supabase = getSupabaseClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) throw error;
-  };
-
-  const signInWithGithub = async () => {
-    const supabase = getSupabaseClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) throw error;
-  };
-
-  const signInWithMagicLink = async (email: string) => {
-    const supabase = getSupabaseClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) throw error;
-  };
-
-  const value = {
-    user,
-    loading,
-    signIn,
-    signUp,
-    signOut,
-    resetPassword,
-    signInWithGoogle,
-    signInWithGithub,
-    signInWithMagicLink,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        signIn,
+        signUp,
+        signOut,
+        resetPassword,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

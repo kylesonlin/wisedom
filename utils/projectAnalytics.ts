@@ -25,7 +25,7 @@ export interface ProjectAnalytics {
   contactEngagement: {
     contactId: string;
     interactionCount: number;
-    lastInteraction: Date;
+    lastInteraction: Date | null;
     sentimentScore: number;
   }[];
   milestoneProgress: {
@@ -58,6 +58,10 @@ export interface ActionItem {
   status: 'pending' | 'in-progress' | 'completed';
   createdAt: Date;
   updatedAt: Date;
+  metadata?: {
+    interactionId?: string;
+    contactId?: string;
+  };
 }
 
 export async function calculateProjectAnalytics(
@@ -103,7 +107,9 @@ export async function calculateProjectAnalytics(
     return {
       contactId: projectContact.contactId,
       interactionCount: contactInteractions.length,
-      lastInteraction: new Date(Math.max(...contactInteractions.map(i => i.timestamp.getTime()))),
+      lastInteraction: contactInteractions.length > 0
+        ? new Date(Math.max(...contactInteractions.map(i => new Date(i.timestamp).getTime())))
+        : null,
       sentimentScore: averageSentiment,
     };
   });
@@ -122,34 +128,43 @@ export async function calculateProjectAnalytics(
   });
 
   // Create timeline
-  const timeline = [
-    ...project.tasks.map(task => ({
-      date: task.dueDate,
-      events: [{
-        type: 'task' as const,
-        id: task.id,
-        title: task.title,
-        status: task.status,
-      }],
-    })),
-    ...project.milestones.map(milestone => ({
-      date: milestone.dueDate,
-      events: [{
-        type: 'milestone' as const,
-        id: milestone.id,
-        title: milestone.title,
-        status: milestone.status,
-      }],
-    })),
-    ...interactions.map(interaction => ({
-      date: interaction.timestamp,
-      events: [{
-        type: 'interaction' as const,
-        id: interaction.id,
-        title: interaction.type,
-        status: interaction.status,
-      }],
-    })),
+  const taskTimeline = project.tasks.map(task => ({
+    date: task.dueDate,
+    events: [{
+      type: 'task' as const,
+      id: task.id,
+      title: task.title,
+      status: task.status,
+    }],
+  }));
+
+  const milestoneTimeline = project.milestones.map(milestone => ({
+    date: milestone.dueDate,
+    events: [{
+      type: 'milestone' as const,
+      id: milestone.id,
+      title: milestone.title,
+      status: milestone.status,
+    }],
+  }));
+
+  const interactionTimeline = interactions.map(interaction => ({
+    date: interaction.timestamp,
+    events: [{
+      type: 'interaction' as const,
+      id: interaction.id,
+      title: interaction.type,
+      status: interaction.status,
+    }],
+  }));
+
+  const sortedTimeline = [
+    ...taskTimeline,
+    ...milestoneTimeline,
+    ...interactionTimeline.map(item => ({
+      ...item,
+      date: new Date(item.date)
+    }))
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   // Calculate overall completion rate
@@ -165,7 +180,7 @@ export async function calculateProjectAnalytics(
     teamMemberActivity,
     contactEngagement,
     milestoneProgress,
-    timeline,
+    timeline: sortedTimeline,
   };
 }
 
@@ -198,19 +213,25 @@ export function generateActionItems(
   // Generate action items from interactions
   interactions.forEach(interaction => {
     if (interaction.followUpNeeded) {
-      actionItems.push({
-        id: `followup-${interaction.id}`,
+      const timestamp = new Date(interaction.timestamp);
+      const actionItem: ActionItem = {
+        id: generateId(),
         type: 'follow-up',
         title: `Follow up with ${(() => { const c = contacts.find(c => c.id === interaction.contactId); return c ? `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() : '' })()}`,
         description: `Follow up regarding: ${interaction.summary}`,
         priority: interaction.priority,
-        dueDate: new Date(interaction.timestamp.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 days from interaction
+        dueDate: new Date(timestamp.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 days from interaction
         assignedTo: interaction.userId,
         contactId: interaction.contactId,
         status: 'pending',
-        createdAt: interaction.timestamp,
-        updatedAt: interaction.timestamp,
-      });
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        metadata: {
+          interactionId: interaction.id,
+          contactId: interaction.contactId
+        }
+      };
+      actionItems.push(actionItem);
     }
   });
 
@@ -239,4 +260,31 @@ export function generateActionItems(
   });
 
   return actionItems.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+}
+
+function generateId(): string {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+function createActionItemFromInteraction(interaction: Interaction, contacts: Contact[]): ActionItem {
+  const timestamp = new Date(interaction.timestamp);
+  const dueDate = new Date(timestamp.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from interaction
+  
+  const actionItem: ActionItem = {
+    id: generateId(),
+    type: 'follow-up',
+    title: `Follow up on ${interaction.type}`,
+    description: `Follow up needed for ${interaction.summary}`,
+    priority: 'medium',
+    dueDate,
+    status: 'pending',
+    assignedTo: interaction.userId,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    metadata: {
+      interactionId: interaction.id,
+      contactId: interaction.contactId
+    }
+  };
+  return actionItem;
 } 

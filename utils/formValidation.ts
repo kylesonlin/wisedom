@@ -1,9 +1,13 @@
+export type ValidationValue = string | number | boolean | Date | null;
+
 export interface ValidationRule {
   required?: boolean;
   minLength?: number;
   maxLength?: number;
   pattern?: RegExp;
-  custom?: (value: any) => string | undefined;
+  custom?: (value: ValidationValue) => string | undefined;
+  validate?: (value: ValidationValue) => boolean;
+  message?: string;
 }
 
 export interface ValidationResult {
@@ -11,33 +15,27 @@ export interface ValidationResult {
   errors: Record<string, string>;
 }
 
+export type ValidationRules = Record<string, ValidationRule>;
+
 export const validateField = (
-  value: any,
+  value: ValidationValue,
   rules: ValidationRule
 ): string | undefined => {
-  if (rules.required) {
-    if (Array.isArray(value) && value.length === 0) {
-      return 'This field is required';
-    }
-    if (typeof value === 'string' && !value.trim()) {
-      return 'This field is required';
-    }
-    if (typeof value === 'boolean' && !value) {
-      return 'This field is required';
-    }
+  if (rules.required && (value === undefined || value === null || value === '')) {
+    return rules.message || 'This field is required';
   }
 
   if (typeof value === 'string') {
     if (rules.minLength && value.length < rules.minLength) {
-      return `Minimum length is ${rules.minLength} characters`;
+      return rules.message || `Minimum length is ${rules.minLength}`;
     }
 
     if (rules.maxLength && value.length > rules.maxLength) {
-      return `Maximum length is ${rules.maxLength} characters`;
+      return rules.message || `Maximum length is ${rules.maxLength}`;
     }
 
     if (rules.pattern && !rules.pattern.test(value)) {
-      return 'Invalid format';
+      return rules.message || 'Invalid format';
     }
   }
 
@@ -45,26 +43,29 @@ export const validateField = (
     return rules.custom(value);
   }
 
+  if (rules.validate && !rules.validate(value)) {
+    return rules.message || 'Invalid value';
+  }
+
   return undefined;
 };
 
 export const validateForm = (
-  formData: Record<string, any>,
-  validationRules: Record<string, ValidationRule>
+  values: Record<string, ValidationValue>,
+  rules: ValidationRules
 ): ValidationResult => {
   const errors: Record<string, string> = {};
+  let isValid = true;
 
-  Object.entries(validationRules).forEach(([field, rules]) => {
-    const error = validateField(formData[field], rules);
+  for (const [field, fieldRules] of Object.entries(rules)) {
+    const error = validateField(values[field], fieldRules);
     if (error) {
       errors[field] = error;
+      isValid = false;
     }
-  });
+  }
 
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return { isValid, errors };
 };
 
 // Common validation rules

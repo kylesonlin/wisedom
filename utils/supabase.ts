@@ -4,19 +4,19 @@ import { createClient } from '@supabase/supabase-js';
 export type Profile = {
   id: string;
   username: string;
-  full_name: string;
-  avatar_url: string;
-  created_at: string;
-  updated_at: string;
+  fullName: string;
+  avatarUrl: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Project = {
   id: string;
   name: string;
   description: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Task = {
@@ -24,10 +24,11 @@ export type Task = {
   title: string;
   description: string;
   status: 'todo' | 'in_progress' | 'done';
-  project_id: string;
-  assigned_to: string;
-  created_at: string;
-  updated_at: string;
+  projectId: string;
+  assignedTo: string;
+  createdAt: string;
+  updatedAt: string;
+  dueDate: string;
 };
 
 // Storage bucket names
@@ -70,14 +71,14 @@ export const getProfile = async (userId: string) => {
   return data as Profile;
 };
 
-export const createProfile = async (profile: Omit<Profile, 'id' | 'created_at' | 'updated_at'>) => {
+export const createProfile = async (profile: Omit<Profile, 'id' | 'createdAt' | 'updatedAt'>) => {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('profiles')
     .insert([{
       ...profile,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }])
     .select()
     .single();
@@ -91,7 +92,7 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
     .from('profiles')
     .update({
       ...updates,
-      updated_at: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     })
     .eq('id', userId)
     .select()

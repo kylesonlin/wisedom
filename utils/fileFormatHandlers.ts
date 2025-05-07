@@ -1,13 +1,13 @@
 import { Contact } from '../types/contact';
 
 interface FileFormatHandler {
-  parse: (content: string) => Contact[];
+  parse: (content: string, userId: string) => Contact[];
   validate: (content: string) => boolean;
 }
 
 // CSV Handler
 const csvHandler: FileFormatHandler = {
-  parse: (content: string): Contact[] => {
+  parse: (content: string, userId: string): Contact[] => {
     const lines = content.split('\n');
     const headers = lines[0].split(',').map(h => h?.trim().toLowerCase() ?? '');
     
@@ -15,6 +15,7 @@ const csvHandler: FileFormatHandler = {
       const values = line.split(',').map(v => v.trim());
       const contact: Partial<Contact> = {
         id: crypto.randomUUID(),
+        userId,
         firstName: '',
         lastName: '',
         email: '',
@@ -83,12 +84,13 @@ const csvHandler: FileFormatHandler = {
 
 // JSON Handler
 const jsonHandler: FileFormatHandler = {
-  parse: (content: string): Contact[] => {
+  parse: (content: string, userId: string): Contact[] => {
     try {
       const data = JSON.parse(content);
       if (Array.isArray(data)) {
         return data.map(item => ({
           id: crypto.randomUUID(),
+          userId,
           firstName: item.name || '',
           lastName: '',
           email: item.email || '',
@@ -123,7 +125,7 @@ const jsonHandler: FileFormatHandler = {
 
 // vCard Handler
 const vCardHandler: FileFormatHandler = {
-  parse: (content: string): Contact[] => {
+  parse: (content: string, userId: string): Contact[] => {
     const contacts: Contact[] = [];
     const vCards = content.split('BEGIN:VCARD');
     
@@ -132,6 +134,7 @@ const vCardHandler: FileFormatHandler = {
       
       const contact: Partial<Contact> = {
         id: crypto.randomUUID(),
+        userId,
         firstName: '',
         lastName: '',
         email: '',
@@ -212,17 +215,22 @@ export const getFileHandler = (format: string): FileFormatHandler | null => {
 // Parse file content
 export const parseFileContent = (
   content: string,
-  format?: string
+  format?: string,
+  userId?: string
 ): Contact[] => {
+  if (!userId) {
+    throw new Error('userId is required to parse file content');
+  }
+
   const detectedFormat = format || detectFileFormat(content);
   if (!detectedFormat) {
-    throw new Error('Could not detect file format');
+    throw new Error('Unsupported file format');
   }
 
   const handler = getFileHandler(detectedFormat);
   if (!handler) {
-    throw new Error(`No handler found for format: ${detectedFormat}`);
+    throw new Error('No handler found for format: ' + detectedFormat);
   }
 
-  return handler.parse(content);
+  return handler.parse(content, userId);
 }; 

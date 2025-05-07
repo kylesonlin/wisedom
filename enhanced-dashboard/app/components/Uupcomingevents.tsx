@@ -1,0 +1,120 @@
+"use client"
+
+import * as React from "react"
+import { useState } from "react"
+import { Cake, Award, Bell } from "lucide-react"
+
+import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/Uavatar"
+import { Button } from "../../components/ui/Ubutton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/Utabs"
+
+const events = [
+  {
+    id: 1,
+    type: "birthday",
+    person: {
+      name: "Sarah Johnson",
+      role: "Marketing Director",
+      company: "Acme Inc.",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    date: "Today",
+    notified: true,
+  },
+  {
+    id: 2,
+    type: "work_anniversary",
+    person: {
+      name: "Michael Chen",
+      role: "Senior Developer",
+      company: "Tech Solutions",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    years: 5,
+    date: "Tomorrow",
+    notified: false,
+  },
+  {
+    id: 3,
+    type: "birthday",
+    person: {
+      name: "Alex Rodriguez",
+      role: "Sales Manager",
+      company: "Global Sales Inc.",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    date: "May 15",
+    notified: false,
+  },
+  {
+    id: 4,
+    type: "work_anniversary",
+    person: {
+      name: "Emily Wilson",
+      role: "HR Specialist",
+      company: "Acme Inc.",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    years: 3,
+    date: "May 20",
+    notified: false,
+  },
+]
+
+export function UpcomingEvents() {
+  const [eventsList, setEventsList] = useState(events)
+
+  const toggleNotification = (id: number) => {
+    setEventsList(eventsList.map((event) => (event.id === id ? { ...event, notified: !event.notified } : event)))
+  }
+
+  return (
+    <div className="space-y-4">
+      <Tabs defaultValue="upcoming" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+          <TabsTrigger value="past">Past</TabsTrigger>
+        </TabsList>
+        <TabsContent value="upcoming" className="space-y-4 mt-2">
+          {eventsList.map((event) => (
+            <div key={event.id} className="flex items-start gap-3">
+              <Avatar className="h-10 w-10 border">
+                <AvatarImage src={event.person.avatar || "/placeholder.svg"} alt={event.person.name} />
+                <AvatarFallback>{event.person.name.substring(0, 2)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-sm">{event.person.name}</h3>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleNotification(event.id)}>
+                    <Bell className={`h-4 w-4 ${event.notified ? "fill-primary text-primary" : ""}`} />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  {event.type === "birthday" ? (
+                    <>
+                      <Cake className="h-3 w-3 text-rose-500" />
+                      <span>Birthday</span>
+                    </>
+                  ) : (
+                    <>
+                      <Award className="h-3 w-3 text-amber-500" />
+                      <span>{event.years} Year Anniversary</span>
+                    </>
+                  )}
+                  <span className="mx-1">•</span>
+                  <span>{event.date}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {event.person.role} at {event.person.company}
+                </p>
+              </div>
+            </div>
+          ))}
+        </TabsContent>
+        <TabsContent value="past">
+          <div className="py-8 text-center text-sm text-muted-foreground">Past events will appear here.</div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}

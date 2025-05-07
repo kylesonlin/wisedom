@@ -1,11 +1,22 @@
 import { Contact } from '../types/contact';
 
-interface NormalizedContact extends Contact {
-  normalizedEmail?: string;
+export interface NormalizedContact extends Omit<Contact, 'email' | 'phone' | 'firstName' | 'lastName'> {
+  email: string;
+  normalizedEmail: string;
+  phone?: string;
   normalizedPhone?: string;
+  firstName?: string;
+  lastName?: string;
   normalizedName?: string;
-  source?: string;
-  confidence?: number;
+  source: string;
+  confidence: number;
+  normalizationTimestamp: Date;
+  originalValues: {
+    email?: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+  };
 }
 
 // Helper function to clean and standardize email addresses
@@ -182,12 +193,26 @@ export const mergeDuplicateContacts = (duplicates: Contact[]): Contact => {
 // Function to normalize a single contact
 export const normalizeContact = (contact: Contact): NormalizedContact => {
   const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+  const normalizedName = normalizeName(getFullName(contact));
+  
   return {
     ...contact,
     email: normalizeEmail(contact.email ? contact.email : ''),
-    phone: normalizePhone(contact.phone ? contact.phone : ''),
+    phone: contact.phone ? normalizePhone(contact.phone) : undefined,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
     normalizedEmail: normalizeEmail(contact.email ? contact.email : ''),
-    normalizedPhone: normalizePhone(contact.phone ? contact.phone : ''),
+    normalizedPhone: contact.phone ? normalizePhone(contact.phone) : undefined,
+    normalizedName,
+    source: contact.source || 'manual',
+    confidence: 1.0,
+    normalizationTimestamp: new Date(),
+    originalValues: {
+      email: contact.email,
+      phone: contact.phone,
+      firstName: contact.firstName,
+      lastName: contact.lastName
+    }
   };
 };
 

@@ -1,0 +1,107 @@
+"use client"
+
+import * as React from "react"
+import { Check, Plus, Search, Mail, Phone, Star } from "lucide-react"
+
+import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/Uavatar"
+import { Button } from "../../components/ui/Ubutton"
+import { Card, CardContent } from "../../components/ui/Ucard"
+import { Input } from "../../components/ui/Uinput"
+import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/Upopover"
+import { ScrollArea } from "../../components/ui/Uscroll-area"
+import { cn } from "@/lib/utils"
+
+const contacts = [
+  {
+    id: 1,
+    name: "Alex Johnson",
+    role: "Product Manager",
+    company: "TechCorp",
+    email: "alex@example.com",
+    phone: "+1 (555) 123-4567",
+    avatar: "/placeholder.svg?height=40&width=40",
+    favorite: true,
+  },
+  {
+    id: 2,
+    name: "Sam Rivera",
+    role: "Marketing Director",
+    company: "MediaGroup",
+    email: "sam@example.com",
+    phone: "+1 (555) 234-5678",
+    avatar: "/placeholder.svg?height=40&width=40",
+    favorite: true,
+  },
+  {
+    id: 3,
+    name: "Taylor Kim",
+    role: "Software Engineer",
+    company: "DevSolutions",
+    email: "taylor@example.com",
+    phone: "+1 (555) 345-6789",
+    avatar: "/placeholder.svg?height=40&width=40",
+    favorite: false,
+  },
+  {
+    id: 4,
+    name: "Jordan Patel",
+    role: "Financial Advisor",
+    company: "InvestFirm",
+    email: "jordan@example.com",
+    phone: "+1 (555) 456-7890",
+    avatar: "/placeholder.svg?height=40&width=40",
+    favorite: false,
+  },
+]
+
+export function ContactsWidget() {
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex items-center gap-2 mb-4">
+        <Input placeholder="Search contacts..." className="h-8" />
+        <Button variant="outline" size="sm" className="shrink-0">
+          Filter
+        </Button>
+      </div>
+      <div className="space-y-3 overflow-auto flex-1">
+        {contacts.map((contact) => (
+          <Card key={contact.id} className="overflow-hidden">
+            <CardContent className="p-3">
+              <div className="flex items-start gap-3">
+                <Avatar className="h-10 w-10 border">
+                  <AvatarImage src={contact.avatar || "/placeholder.svg"} alt={contact.name} />
+                  <AvatarFallback>{contact.name.substring(0, 2)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-1 overflow-hidden">
+                  <div className="flex items-center">
+                    <h4 className="font-medium truncate">{contact.name}</h4>
+                    {contact.favorite && <Star className="ml-1 h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {contact.role} at {contact.company}
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <a
+                      href={`mailto:${contact.email}`}
+                      className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <Mail className="h-3 w-3" />
+                      <span className="truncate">{contact.email}</span>
+                    </a>
+                    <a
+                      href={`tel:${contact.phone}`}
+                      className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <Phone className="h-3 w-3" />
+                      <span>{contact.phone}</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}

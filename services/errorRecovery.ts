@@ -1,90 +1,126 @@
-import { ImportError, ImportErrorType } from '../utils/errorHandling';
 import { Contact } from '../types/contact';
 
-interface RecoveryStrategy {
-  type: ImportErrorType;
-  canRecover: (error: ImportError) => boolean;
-  recover: (error: ImportError) => Promise<void>;
+export interface BaseError extends Error {
+  details?: {
+    code: string;
+    message: string;
+    context?: any;
+  };
+  type?: string;
+}
+
+export interface ImportError extends BaseError {
+  type: 'IMPORT_ERROR';
+}
+
+export interface ProcessingError extends BaseError {
+  type: 'PROCESSING_ERROR';
+}
+
+export interface DatabaseError extends BaseError {
+  type: 'DATABASE_ERROR';
+}
+
+export interface ValidationError extends BaseError {
+  type: 'VALIDATION_ERROR';
+}
+
+export type ErrorType = 'IMPORT_ERROR' | 'PROCESSING_ERROR' | 'DATABASE_ERROR' | 'VALIDATION_ERROR';
+export type RecoverableError = ImportError | ProcessingError | DatabaseError | ValidationError;
+
+interface ErrorRecoveryStrategy {
+  type: ErrorType;
+  canRecover: (error: RecoverableError) => boolean;
+  recover: (error: RecoverableError) => Promise<void>;
+}
+
+const errorRecoveryStrategies: ErrorRecoveryStrategy[] = [
+  {
+    type: 'IMPORT_ERROR',
+    canRecover: (error) => {
+      return error.details?.code === 'FILE_NOT_FOUND';
+    },
+    recover: async (error) => {
+      // Implement import error recovery
+      console.log('Recovering from import error:', error);
+      // Add retry logic or alternative import method
+    }
+  },
+  {
+    type: 'PROCESSING_ERROR',
+    canRecover: (error) => {
+      return error.details?.code === 'CONNECTION_ERROR';
+    },
+    recover: async (error) => {
+      // Implement processing error recovery
+      console.log('Recovering from processing error:', error);
+      // Add retry logic with exponential backoff
+    }
+  },
+  {
+    type: 'DATABASE_ERROR',
+    canRecover: (error) => {
+      return error.details?.code === 'DEADLOCK';
+    },
+    recover: async (error) => {
+      // Implement database error recovery
+      console.log('Recovering from database error:', error);
+      // Add retry logic with transaction management
+    }
+  },
+  {
+    type: 'VALIDATION_ERROR',
+    canRecover: (error) => {
+      return error.details?.code === 'INVALID_FORMAT' && error.details?.context !== undefined;
+    },
+    recover: async (error) => {
+      console.log('Recovering from validation error:', error);
+      // Add data normalization or transformation logic
+    }
+  }
+];
+
+export async function handleError(error: Error, type: ErrorType): Promise<void> {
+  const strategy = errorRecoveryStrategies.find(s => s.type === type);
+  
+  if (!strategy) {
+    throw new Error(`No recovery strategy found for error type: ${type}`);
+  }
+
+  const recoverableError = error as RecoverableError;
+  if (strategy.canRecover(recoverableError)) {
+    await strategy.recover(recoverableError);
+  } else {
+    throw error;
+  }
 }
 
 export class ErrorRecoveryService {
   private static instance: ErrorRecoveryService;
-  private strategies: RecoveryStrategy[] = [];
+  private strategies: ErrorRecoveryStrategy[] = [];
 
   private constructor() {
-    this.initializeStrategies();
+    // Initialize with default strategies
+    this.strategies = errorRecoveryStrategies;
   }
 
-  static getInstance(): ErrorRecoveryService {
+  public static getInstance(): ErrorRecoveryService {
     if (!ErrorRecoveryService.instance) {
       ErrorRecoveryService.instance = new ErrorRecoveryService();
     }
     return ErrorRecoveryService.instance;
   }
 
-  private initializeStrategies(): void {
-    this.strategies = [
-      {
-        type: 'VALIDATION_ERROR',
-        canRecover: (error) => {
-          const context = error.context;
-          return context?.fileFormat !== undefined && 
-                 context?.lineNumber !== undefined;
-        },
-        recover: async (error) => {
-          // Implement file parsing recovery
-          // This could involve:
-          // 1. Attempting to parse the file with different settings
-          // 2. Skipping problematic lines
-          // 3. Using a different parser
-          console.log('Recovering from file parse error:', error);
-        }
-      },
-      {
-        type: 'PROCESSING_ERROR',
-        canRecover: (error) => {
-          // No 'contact' property in ImportErrorContext, so just return false or use another check
-          return false;
-        },
-        recover: async (error) => {
-          // Implement contact normalization recovery
-          // This could involve:
-          // 1. Using fallback normalization rules
-          // 2. Manual review of problematic contacts
-          // 3. Skipping problematic fields
-          console.log('Recovering from normalization error:', error);
-        }
-      },
-      {
-        type: 'PROCESSING_ERROR',
-        canRecover: (error) => {
-          const batchIndex = error.context?.batchIndex;
-          return batchIndex !== undefined;
-        },
-        recover: async (error) => {
-          // Implement duplicate detection recovery
-          // This could involve:
-          // 1. Adjusting similarity thresholds
-          // 2. Using alternative matching algorithms
-          // 3. Manual review of potential duplicates
-          console.log('Recovering from duplicate detection error:', error);
-        }
-      },
-      {
-        type: 'PROCESSING_ERROR',
-        canRecover: (error) => {
-          return error.details?.code === 'CONNECTION_ERROR';
-        },
-        recover: async (error) => {
-          // Implement database error recovery
-          // This could involve:
-          // 1. Retrying the operation
-          // 2. Using a fallback database
-          // 3. Queueing the operation for later
-          console.log('Recovering from database error:', error);
-        }
-      }
-    ];
+  getRecoveryStrategies(): ErrorRecoveryStrategy[] {
+    return this.strategies;
+  }
+
+  addRecoveryStrategy(strategy: ErrorRecoveryStrategy): void {
+    this.strategies.push(strategy);
+  }
+
+  async handleError(error: Error, type: ErrorType): Promise<void> {
+    await handleError(error, type);
   }
 
   async attemptRecovery(error: ImportError): Promise<boolean> {
@@ -101,14 +137,6 @@ export class ErrorRecoveryService {
       console.error('Recovery attempt failed:', recoveryError);
       return false;
     }
-  }
-
-  getRecoveryStrategies(): RecoveryStrategy[] {
-    return this.strategies;
-  }
-
-  addRecoveryStrategy(strategy: RecoveryStrategy): void {
-    this.strategies.push(strategy);
   }
 
   async retryOperation<T>(

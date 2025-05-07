@@ -1,4 +1,4 @@
-import { Interaction } from '../types/contact';
+import { Interaction } from '../types/interaction';
 import { Contact } from '../types/contact';
 import { ContactUpdate } from './contactMonitoring';
 

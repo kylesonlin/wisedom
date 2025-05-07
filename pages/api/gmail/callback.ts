@@ -39,8 +39,8 @@ interface NormalizedContact {
   imageUrl: string;
   source: string;
   rawData: GoogleContact;
-  created_at?: string;
-  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -84,7 +84,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-        updated_at: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       })
       .eq('user_id', state)
       .eq('provider', 'gmail');

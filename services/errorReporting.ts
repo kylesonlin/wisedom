@@ -1,9 +1,9 @@
-import { ImportError, ImportErrorType } from '../utils/errorHandling';
+import { BaseError, ErrorType } from './errorRecovery';
 import { getSupabaseClient } from '../utils/supabase';
 
 interface ErrorMetrics {
   totalErrors: number;
-  errorsByType: Record<ImportErrorType, number>;
+  errorsByType: Record<ErrorType, number>;
   errorsByTime: Record<string, number>;
   averageResolutionTime: number;
   recoveryRate: number;
@@ -12,19 +12,34 @@ interface ErrorMetrics {
 interface ErrorNotification {
   type: 'email' | 'slack' | 'webhook';
   recipient: string;
-  error: ImportError;
+  error: BaseError;
   timestamp: Date;
   status: 'pending' | 'sent' | 'failed';
+}
+
+interface ErrorReport {
+  type: ErrorType;
+  message: string;
+  details?: {
+    code: string;
+    message: string;
+    context?: any;
+  };
+  context?: any;
+  timestamp: Date;
+  userId?: string | null;
+  stackTrace?: string;
 }
 
 export class ErrorReportingService {
   private static instance: ErrorReportingService;
   private errorCount: number = 0;
-  private errorsByType: Map<ImportErrorType, number> = new Map();
+  private errorsByType: Map<ErrorType, number> = new Map();
   private errorsByTime: Map<string, number> = new Map();
   private resolutionTimes: number[] = [];
   private resolvedErrors: number = 0;
   private notifications: ErrorNotification[] = [];
+  private errorLogs: ErrorReport[] = [];
 
   private constructor() {}
 
@@ -35,25 +50,34 @@ export class ErrorReportingService {
     return ErrorReportingService.instance;
   }
 
-  public async reportError(error: ImportError): Promise<void> {
+  public async reportError(error: BaseError): Promise<void> {
+    const errorReport: ErrorReport = {
+      type: error.type as ErrorType,
+      message: error.message,
+      details: error.details,
+      timestamp: new Date(),
+      stackTrace: error.stack
+    };
+
+    this.errorLogs.push(errorReport);
+    await this.sendErrorToServer(errorReport);
+  }
+
+  private async sendErrorToServer(errorReport: ErrorReport): Promise<void> {
     try {
-      this.errorCount++;
-      this.errorsByType.set(
-        error.type,
-        (this.errorsByType.get(error.type) || 0) + 1
-      );
-
-      const timeKey = new Date().toISOString().split('T')[0];
-      this.errorsByTime.set(
-        timeKey,
-        (this.errorsByTime.get(timeKey) || 0) + 1
-      );
-
-      await this.saveErrorToDatabase(error);
-      await this.sendNotifications(error);
-    } catch (err) {
-      console.error('Failed to report error:', err);
+      // Implement server reporting logic here
+      console.log('Sending error report to server:', errorReport);
+    } catch (error) {
+      console.error('Failed to send error report:', error);
     }
+  }
+
+  public getErrorLogs(): ErrorReport[] {
+    return this.errorLogs;
+  }
+
+  public clearErrorLogs(): void {
+    this.errorLogs = [];
   }
 
   public async resolveError(errorId: string, resolutionTime: number): Promise<void> {
@@ -80,7 +104,7 @@ export class ErrorReportingService {
 
   public getMetrics(): ErrorMetrics {
     const totalErrors = this.errorCount;
-    const errorsByType = Object.fromEntries(this.errorsByType) as Record<ImportErrorType, number>;
+    const errorsByType = Object.fromEntries(this.errorsByType) as Record<ErrorType, number>;
     const errorsByTime = Object.fromEntries(this.errorsByTime);
     const averageResolutionTime = this.resolutionTimes.length > 0
       ? this.resolutionTimes.reduce((a, b) => a + b, 0) / this.resolutionTimes.length
@@ -98,32 +122,7 @@ export class ErrorReportingService {
     };
   }
 
-  private async saveErrorToDatabase(error: ImportError): Promise<void> {
-    try {
-      const supabase = getSupabaseClient();
-      const { error: dbError } = await supabase
-        .from('error_logs')
-        .insert({
-          type: error.type,
-          message: error.message,
-          details: error.details,
-          context: error.context,
-          timestamp: error.timestamp,
-          user_id: error.context?.userId || null,
-          session_id: error.context?.sessionId || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          resolved: false
-        });
-
-      if (dbError) throw dbError;
-    } catch (err) {
-      console.error('Failed to save error to database:', err);
-      throw err;
-    }
-  }
-
-  private async sendNotifications(error: ImportError): Promise<void> {
+  private async sendNotifications(error: BaseError): Promise<void> {
     const notification: ErrorNotification = {
       type: 'email',
       recipient: 'admin@example.com', // Replace with actual admin email
@@ -156,7 +155,7 @@ export class ErrorReportingService {
 
   async getErrorTrends(): Promise<{
     dailyTrends: Record<string, number>;
-    typeDistribution: Record<ImportErrorType, number>;
+    typeDistribution: Record<ErrorType, number>;
     recoveryRate: number;
   }> {
     try {
@@ -169,12 +168,11 @@ export class ErrorReportingService {
       if (error) throw error;
 
       const dailyTrends: Record<string, number> = {};
-      const typeDistribution: Record<ImportErrorType, number> = {
-        'FILE_ERROR': 0,
-        'PARSE_ERROR': 0,
-        'VALIDATION_ERROR': 0,
+      const typeDistribution: Record<ErrorType, number> = {
+        'IMPORT_ERROR': 0,
         'PROCESSING_ERROR': 0,
-        'SAVE_ERROR': 0
+        'DATABASE_ERROR': 0,
+        'VALIDATION_ERROR': 0
       };
       let recoveredCount = 0;
 
@@ -184,7 +182,7 @@ export class ErrorReportingService {
         dailyTrends[date] = (dailyTrends[date] || 0) + 1;
 
         // Calculate type distribution
-        typeDistribution[error.type as ImportErrorType] = (typeDistribution[error.type as ImportErrorType] || 0) + 1;
+        typeDistribution[error.type as ErrorType] = (typeDistribution[error.type as ErrorType] || 0) + 1;
 
         // Count recovered errors
         if (error.resolved_at) recoveredCount++;

@@ -50,7 +50,7 @@ export async function getProjectMembers(projectId: string): Promise<ProjectMembe
   const { data, error } = await supabase
     .from('project_members')
     .select('*')
-    .eq('project_id', projectId);
+    .eq('projectId', projectId);
 
   if (error) throw error;
   return data;
@@ -61,11 +61,11 @@ export async function addProjectMember(projectId: string, userId: string, role: 
   const { data, error } = await supabase
     .from('project_members')
     .insert({
-      project_id: projectId,
-      user_id: userId,
+      projectId: projectId,
+      userId: userId,
       role,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     })
     .select()
     .single();
@@ -79,7 +79,7 @@ export async function getProjectContacts(projectId: string): Promise<ProjectCont
   const { data, error } = await supabase
     .from('project_contacts')
     .select('*')
-    .eq('project_id', projectId);
+    .eq('projectId', projectId);
 
   if (error) throw error;
   return data;
@@ -90,10 +90,10 @@ export async function addProjectContact(projectId: string, contactId: string): P
   const { data, error } = await supabase
     .from('project_contacts')
     .insert({
-      project_id: projectId,
-      contact_id: contactId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      projectId: projectId,
+      contactId: contactId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     })
     .select()
     .single();
@@ -107,7 +107,7 @@ export async function getProjectTasks(projectId: string): Promise<Task[]> {
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
-    .eq('project_id', projectId);
+    .eq('projectId', projectId);
 
   if (error) throw error;
   return data;
@@ -150,7 +150,7 @@ export async function getProjectMilestones(projectId: string): Promise<Milestone
   const { data, error } = await supabase
     .from('milestones')
     .select('*')
-    .eq('project_id', projectId);
+    .eq('projectId', projectId);
 
   if (error) throw error;
   return data;

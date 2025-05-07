@@ -1,21 +1,23 @@
 import { Contact } from '../types/contact';
-import { Interaction } from '../types/contact';
+import { Interaction } from '../types/interaction';
 import { ActionItem } from './projectAnalytics';
 import { calculatePriorityScore } from './aiAnalysis';
 
 export interface ContactUpdate {
   contactId: string;
-  type: 'interaction' | 'birthday' | 'anniversary' | 'status-change';
+  type: 'interaction' | 'birthday' | 'anniversary' | 'status-change' | 'inactivity';
   timestamp: Date;
   priority: 'low' | 'medium' | 'high';
   details: string;
   actionNeeded: boolean;
+  message?: string;
+  status: 'pending' | 'completed' | 'cancelled';
 }
 
 export interface ContactPriority {
   contactId: string;
   priorityScore: number;
-  lastInteraction: Date;
+  lastInteraction: Date | null;
   interactionFrequency: number;
   sentimentScore: number;
   relationshipStrength: number;
@@ -55,6 +57,7 @@ export function monitorContactUpdates(
           priority: daysUntilBirthday <= 3 ? 'high' : 'medium',
           details: `Birthday in ${daysUntilBirthday} days`,
           actionNeeded: true,
+          status: 'pending'
         });
       }
     }
@@ -62,18 +65,19 @@ export function monitorContactUpdates(
 
   // Check for recent interactions
   interactions.forEach(interaction => {
-    const hoursSinceInteraction = Math.ceil(
-      (currentDate.getTime() - interaction.timestamp.getTime()) / (1000 * 60 * 60)
+    const hoursSinceLastInteraction = Math.ceil(
+      (currentDate.getTime() - new Date(interaction.timestamp).getTime()) / (1000 * 60 * 60)
     );
 
-    if (hoursSinceInteraction <= 24) {
+    if (hoursSinceLastInteraction <= 24) {
       updates.push({
-        contactId: interaction.contact_id,
+        contactId: interaction.contactId,
         type: 'interaction',
-        timestamp: interaction.timestamp,
+        timestamp: new Date(interaction.timestamp),
         priority: 'medium',
         details: `New ${interaction.type}: ${interaction.summary}`,
         actionNeeded: false,
+        status: 'pending'
       });
     }
   });
@@ -87,12 +91,12 @@ export function calculateContactPriorities(
   updates: ContactUpdate[]
 ): ContactPriority[] {
   return contacts.map(contact => {
-    const contactInteractions = interactions.filter(i => i.contact_id === contact.id);
+    const contactInteractions = interactions.filter(i => i.contactId === contact.id);
     const contactUpdates = updates.filter(u => u.contactId === contact.id);
     
     const lastInteraction = contactInteractions.length > 0
-      ? new Date(Math.max(...contactInteractions.map(i => i.timestamp.getTime())))
-      : new Date(0);
+      ? new Date(Math.max(...contactInteractions.map(i => new Date(i.timestamp).getTime())))
+      : null;
 
     const interactionFrequency = contactInteractions.length / 30; // Interactions per month
     const sentimentScores = contactInteractions.map(i => i.sentiment || 0);
