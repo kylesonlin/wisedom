@@ -73,6 +73,30 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: '/',
+        destination: '/marketing',
+        has: [
+          {
+            type: 'host',
+            value: 'wisedom.ai',
+          },
+        ],
+      },
+      {
+        source: '/',
+        destination: '/app',
+        has: [
+          {
+            type: 'host',
+            value: 'app.wisedom.ai',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig; 
