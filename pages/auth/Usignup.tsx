@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/Ubutton';
 import { Input } from '../../components/ui/Uinput';
