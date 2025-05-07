@@ -23,6 +23,12 @@ export default function MarketingPage() {
               >
                 Get Started
               </Link>
+              <Link
+                href="https://app.wisedom.ai/auth/signin"
+                className="rounded-md border border-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-indigo-600 bg-white shadow-sm hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              >
+                Sign In
+              </Link>
               <Link href="#features" className="text-sm font-semibold leading-6 text-gray-900">
                 Learn more <span aria-hidden="true">→</span>
               </Link>
