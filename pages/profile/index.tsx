@@ -7,3 +7,7 @@ import { getProfile, updateProfile, uploadAvatar, Profile } from '../../utils/su
 import { validateForm } from '../../utils/formValidation';
 
 // ... rest of the file ... 
+
+export default function ProfilePage() {
+  return <div>Profile Page</div>;
+} 
