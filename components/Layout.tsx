@@ -1,22 +1,18 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+image.png"use client";
 
-interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode
-}
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { ThemeProvider } from '@/components/contexts/ThemeContext';
+import MainLayout from './MainLayout';
 
-export function Layout({ children, className, ...props }: LayoutProps) {
+export default function Layout({ children }: { children: React.ReactNode }) {
+  const supabase = useSupabaseClient();
+  const router = useRouter();
+
   return (
-    <div
-      className={cn(
-        "min-h-screen bg-background font-sans antialiased",
-        className
-      )}
-      {...props}
-    >
-      <div className="relative flex min-h-screen flex-col">
-        <div className="flex-1">{children}</div>
-      </div>
-    </div>
-  )
+    <ThemeProvider>
+      <MainLayout>{children}</MainLayout>
+    </ThemeProvider>
+  );
 } 

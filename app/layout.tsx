@@ -1,24 +1,30 @@
-import { Inter } from 'next/font/google';
-import Providers from './providers';
-import './globals.css';
+import type { Metadata } from 'next'
+import './globals.css'
+import { ThemeProvider } from '../components/ThemeProvider'
 
-const inter = Inter({ subsets: ['latin'] });
-
-export const metadata = {
-  title: 'Wisedom - Mission Control for Network Management',
-  description: 'Manage your professional network, track interactions, and stay on top of your relationships.',
-};
+export const metadata: Metadata = {
+  title: 'Contact Management System',
+  description: 'Enhanced contact management and relationship tracking system',
+  generator: 'Next.js',
+}
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <Providers>{children}</Providers>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
-  );
+  )
 } 

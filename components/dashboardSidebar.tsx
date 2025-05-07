@@ -2,7 +2,7 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/Ubutton"
+import { Button } from "@/components/ui/Button"
 import {
   LayoutDashboard,
   Users,
