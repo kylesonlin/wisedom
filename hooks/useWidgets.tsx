@@ -1,14 +1,11 @@
+"use client";
+
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
-import { WidgetPreference } from '../types/contact';
+import { Widget } from '@/types/widget';
 
-interface Widget {
-  id: string;
-  title: string;
-  component: React.ComponentType;
-  enabled: boolean;
-  order: number;
-}
+const CACHE_KEY = 'widgets-cache';
+const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
 
 interface UseWidgetsReturn {
   widgets: Widget[];
@@ -16,11 +13,7 @@ interface UseWidgetsReturn {
   error: string | null;
   toggleWidget: (widgetId: string, enabled: boolean) => Promise<void>;
   reorderWidget: (widgetId: string, newOrder: number) => Promise<void>;
-  updateWidgetSettings: (widgetId: string, settings: Record<string, any>) => Promise<void>;
 }
-
-const CACHE_KEY = 'widget_preferences_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function useWidgets(userId: string): UseWidgetsReturn {
   const supabase = useSupabaseClient();
@@ -28,38 +21,56 @@ export function useWidgets(userId: string): UseWidgetsReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const getCachedData = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+    
+    const { data, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp > CACHE_DURATION) {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    
+    return data;
+  }, []);
+
+  const setCachedData = useCallback((data: any) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      data,
+      timestamp: Date.now(),
+    }));
+  }, []);
+
   const loadWidgets = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
 
       // Check cache first
-      const cached = localStorage.getItem(CACHE_KEY);
+      const cached = getCachedData();
       if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION) {
-          setWidgets(data);
-          setLoading(false);
-          return;
-        }
+        setWidgets(cached);
+        setLoading(false);
+        return;
       }
 
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from('widgetPreferences')
         .select('*')
         .eq('userId', userId)
         .order('order', { ascending: true });
 
-      if (fetchError) throw fetchError;
+      if (error) throw error;
 
       // Initialize with default preferences if none exist
       if (!data || data.length === 0) {
         const defaultPreferences = [
-          { id: 'networkuoverview', enabled: true, order: 0 },
-          { id: 'contactucard', enabled: true, order: 1 },
-          { id: 'relationshipustrength', enabled: true, order: 2 },
-          { id: 'actionuitems', enabled: true, order: 3 },
-          { id: 'aiusuggestions', enabled: true, order: 4 },
+          { id: 'network-overview', enabled: true, order: 0 },
+          { id: 'contact-card', enabled: true, order: 1 },
+          { id: 'relationship-strength', enabled: true, order: 2 },
+          { id: 'action-items', enabled: true, order: 3 },
+          { id: 'ai-suggestions', enabled: true, order: 4 },
         ];
 
         const { error: insertError } = await supabase
@@ -84,14 +95,11 @@ export function useWidgets(userId: string): UseWidgetsReturn {
         }));
 
         setWidgets(formattedWidgets);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: formattedWidgets,
-          timestamp: Date.now(),
-        }));
+        setCachedData(formattedWidgets);
       } else {
         const formattedWidgets = data.map((pref) => ({
           ...pref,
-          title: pref.widgetId
+          title: pref.id
             .split('-')
             .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' '),
@@ -99,10 +107,7 @@ export function useWidgets(userId: string): UseWidgetsReturn {
         }));
 
         setWidgets(formattedWidgets);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: formattedWidgets,
-          timestamp: Date.now(),
-        }));
+        setCachedData(formattedWidgets);
       }
     } catch (err) {
       console.error('Error loading widget preferences:', err);
@@ -110,7 +115,7 @@ export function useWidgets(userId: string): UseWidgetsReturn {
     } finally {
       setLoading(false);
     }
-  }, [userId, supabase]);
+  }, [userId, supabase, getCachedData, setCachedData]);
 
   useEffect(() => {
     if (userId) {
@@ -124,7 +129,7 @@ export function useWidgets(userId: string): UseWidgetsReturn {
         .from('widgetPreferences')
         .update({ enabled })
         .eq('userId', userId)
-        .eq('widgetId', widgetId);
+        .eq('id', widgetId);
 
       if (error) throw error;
 
@@ -135,17 +140,11 @@ export function useWidgets(userId: string): UseWidgetsReturn {
       );
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        const updatedData = data.map((widget: Widget) =>
+      setCachedData(
+        widgets.map((widget) =>
           widget.id === widgetId ? { ...widget, enabled } : widget
-        );
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: updatedData,
-          timestamp,
-        }));
-      }
+        )
+      );
     } catch (err) {
       console.error('Error toggling widget:', err);
       setError(err instanceof Error ? err.message : 'Failed to toggle widget');
@@ -158,7 +157,7 @@ export function useWidgets(userId: string): UseWidgetsReturn {
         .from('widgetPreferences')
         .update({ order: newOrder })
         .eq('userId', userId)
-        .eq('widgetId', widgetId);
+        .eq('id', widgetId);
 
       if (error) throw error;
 
@@ -169,54 +168,14 @@ export function useWidgets(userId: string): UseWidgetsReturn {
       );
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        const updatedData = data.map((widget: Widget) =>
+      setCachedData(
+        widgets.map((widget) =>
           widget.id === widgetId ? { ...widget, order: newOrder } : widget
-        );
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: updatedData,
-          timestamp,
-        }));
-      }
+        )
+      );
     } catch (err) {
       console.error('Error reordering widget:', err);
       setError(err instanceof Error ? err.message : 'Failed to reorder widget');
-    }
-  };
-
-  const updateWidgetSettings = async (widgetId: string, settings: Record<string, any>) => {
-    try {
-      const { error } = await supabase
-        .from('widgetPreferences')
-        .update({ settings })
-        .eq('userId', userId)
-        .eq('widgetId', widgetId);
-
-      if (error) throw error;
-
-      setWidgets((prev) =>
-        prev.map((widget) =>
-          widget.id === widgetId ? { ...widget, settings } : widget
-        )
-      );
-
-      // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        const updatedData = data.map((widget: Widget) =>
-          widget.id === widgetId ? { ...widget, settings } : widget
-        );
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: updatedData,
-          timestamp,
-        }));
-      }
-    } catch (err) {
-      console.error('Error updating widget settings:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update widget settings');
     }
   };
 
@@ -226,6 +185,5 @@ export function useWidgets(userId: string): UseWidgetsReturn {
     error,
     toggleWidget,
     reorderWidget,
-    updateWidgetSettings,
   };
 } 

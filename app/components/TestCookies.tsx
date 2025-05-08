@@ -1,11 +1,15 @@
+"use client";
+
 import { useEffect, useState } from 'react';
-import { Card } from './ui/Card';
+import { Card } from '@/components/ui/Card';
 
 export function TestCookies() {
   const [cookiesEnabled, setCookiesEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
-    setCookiesEnabled(navigator.cookieEnabled);
+    if (typeof window !== 'undefined') {
+      setCookiesEnabled(navigator.cookieEnabled);
+    }
   }, []);
 
   return (

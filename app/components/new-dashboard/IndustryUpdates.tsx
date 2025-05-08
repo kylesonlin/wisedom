@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import * as React from "react"
 import { Bookmark, ExternalLink, Share2, ThumbsUp } from "lucide-react"
 
-import { Button } from "./ui/Button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/Tabs"
-import { Badge } from "./ui/Badge"
-import { Separator } from "./ui/Separator"
+import { Button } from "@/components/ui/Button/index"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs/index"
+import { Badge } from "@/components/ui/Badge/index"
+import { Separator } from "@/components/ui/Separator/index"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card/index"
 
 const newsItems = [
   {
@@ -56,7 +57,7 @@ const newsItems = [
 ]
 
 export function IndustryUpdates() {
-  const [news, setNews] = useState(newsItems)
+  const [news, setNews] = React.useState(newsItems)
 
   const toggleSaved = (id: number) => {
     setNews(news.map((item) => (item.id === id ? { ...item, saved: !item.saved } : item)))

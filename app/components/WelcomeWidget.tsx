@@ -1,10 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { ArrowRight, Calendar, CheckCircle2, Clock, Users } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 
-import { Button } from "@/components/ui/Button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card"
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui"
+import { CheckCircle2, Calendar, Clock, Users } from "lucide-react"
 
 export function WelcomeWidget() {
   return (

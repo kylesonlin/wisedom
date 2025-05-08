@@ -1,19 +1,21 @@
 "use client"
 
+import * as React from "react"
 import { useEffect, useState } from "react"
 import { createClient } from "@supabase/supabase-js"
-import { CheckCircle2, Circle, Plus } from "lucide-react"
+import { CheckCircle2, Circle, Plus, X } from "lucide-react"
 
-import { Button } from "./ui/Button"
-import { Card, CardContent } from "./ui/Card"
-import { Input } from "./ui/Input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/Tabs"
+import { Button } from "@/components/ui/Button/index"
+import { Card, CardContent } from "@/components/ui/Card/index"
+import { Input } from "@/components/ui/Input/index"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs/index"
 
 interface Task {
   id: string
   title: string
   completed: boolean
   createdAt: string
+  userId: string
 }
 
 const mockTasks: Task[] = [
@@ -22,215 +24,208 @@ const mockTasks: Task[] = [
     title: "Follow up with client about proposal",
     completed: false,
     createdAt: "2024-03-10T10:00:00Z",
+    userId: "",
   },
   {
     id: "2",
     title: "Update contact information",
     completed: true,
     createdAt: "2024-03-09T15:30:00Z",
+    userId: "",
   },
   {
     id: "3",
     title: "Schedule team meeting",
     completed: false,
     createdAt: "2024-03-09T09:00:00Z",
+    userId: "",
   },
   {
     id: "4",
     title: "Review project timeline",
     completed: false,
     createdAt: "2024-03-08T14:20:00Z",
+    userId: "",
   },
 ]
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export function TasksWidget() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [newTaskTitle, setNewTaskTitle] = useState("")
+  const [filter, setFilter] = useState<"all" | "completed" | "incomplete">("all")
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
-
-        const { data, error } = await supabase
-          .from("tasks")
-          .select("*")
-          .order("createdAt", { ascending: false })
-
-        if (error) throw error
-
-        setTasks(data || mockTasks) // Fallback to mock data if no data
-      } catch (error) {
-        console.error("Error fetching tasks:", error)
-        setTasks(mockTasks) // Use mock data on error
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchTasks()
   }, [])
 
-  const toggleTask = async (taskId: string) => {
-    const updatedTasks = tasks.map((task) =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    )
-    setTasks(updatedTasks)
-
+  const fetchTasks = async () => {
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
-      const { error } = await supabase
+      setLoading(true)
+      const { data, error } = await supabase
         .from("tasks")
-        .update({ completed: !tasks.find((t) => t.id === taskId)?.completed })
-        .eq("id", taskId)
+        .select("*")
+        .order("createdAt", { ascending: false })
 
       if (error) throw error
-    } catch (error) {
-      console.error("Error updating task:", error)
-      // Revert the change if the update fails
-      setTasks(tasks)
+
+      setTasks(data || mockTasks)
+    } catch (err) {
+      console.error("Error fetching tasks:", err)
+      setError(err instanceof Error ? err.message : "Failed to fetch tasks")
+      setTasks(mockTasks)
+    } finally {
+      setLoading(false)
     }
   }
 
   const addTask = async () => {
     if (!newTaskTitle.trim()) return
 
-    const newTask: Task = {
-      id: Date.now().toString(),
-      title: newTaskTitle.trim(),
-      completed: false,
-      createdAt: new Date().toISOString(),
-    }
-
-    setTasks([newTask, ...tasks])
-    setNewTaskTitle("")
-
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
-      const { error } = await supabase.from("tasks").insert([newTask])
+      const { data, error } = await supabase.from("tasks").insert([
+        {
+          title: newTaskTitle,
+          completed: false,
+        },
+      ])
 
       if (error) throw error
-    } catch (error) {
-      console.error("Error adding task:", error)
-      // Remove the task if the insert fails
-      setTasks(tasks)
+
+      if (data) {
+        setTasks([...tasks, data[0]])
+        setNewTaskTitle("")
+      }
+    } catch (err) {
+      console.error("Error adding task:", err)
+      setError(err instanceof Error ? err.message : "Failed to add task")
     }
   }
 
-  const activeTasks = tasks.filter((task) => !task.completed)
-  const completedTasks = tasks.filter((task) => task.completed)
+  const toggleTask = async (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId)
+    if (!task) return
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="h-8 w-full animate-pulse rounded bg-gray-200" />
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="space-y-2">
-                <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />
-                <div className="h-3 w-1/2 animate-pulse rounded bg-gray-200" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    )
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ completed: !task.completed })
+        .eq("id", taskId)
+
+      if (error) throw error
+
+      setTasks(
+        tasks.map((t) =>
+          t.id === taskId ? { ...t, completed: !t.completed } : t
+        )
+      )
+    } catch (err) {
+      console.error("Error toggling task:", err)
+      setError(err instanceof Error ? err.message : "Failed to toggle task")
+    }
   }
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      const { error } = await supabase.from("tasks").delete().eq("id", taskId)
+
+      if (error) throw error
+
+      setTasks(tasks.filter((t) => t.id !== taskId))
+    } catch (err) {
+      console.error("Error deleting task:", err)
+      setError(err instanceof Error ? err.message : "Failed to delete task")
+    }
+  }
+
+  const filteredTasks = tasks.filter((task) => {
+    switch (filter) {
+      case "completed":
+        return task.completed
+      case "incomplete":
+        return !task.completed
+      default:
+        return true
+    }
+  })
+
+  const handleKeyPress = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      await addTask()
+      return false
+    }
+  }
+
+  if (loading) return <div>Loading tasks...</div>
+  if (error) return <div>Error: {error}</div>
 
   return (
     <Card>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex space-x-2">
-            <Input
-              placeholder="Add a new task..."
-              value={newTaskTitle}
-              onValueChange={(value: string) => setNewTaskTitle(value)}
-              onKeyPress={(e) => e.key === "Enter" && addTask()}
-            />
-            <Button onClick={addTask}>
-              <Plus className="h-4 w-4" />
-              <span className="sr-only">Add task</span>
-            </Button>
-          </div>
-          <Tabs defaultValue="active" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="active">
-                Active ({activeTasks.length})
-              </TabsTrigger>
-              <TabsTrigger value="completed">
-                Completed ({completedTasks.length})
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="active" className="mt-4">
-              <div className="space-y-2">
-                {activeTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center space-x-2"
-                    onClick={() => toggleTask(task.id)}
-                  >
+      <CardContent className="p-6">
+        <div className="flex items-center space-x-4">
+          <Input
+            placeholder="Add a new task..."
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyPress={handleKeyPress}
+          />
+          <Button onClick={addTask} size="icon">
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        <Tabs value={filter} onValueChange={(value: any) => setFilter(value)}>
+          <TabsList className="mt-4">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+            <TabsTrigger value="incomplete">Incomplete</TabsTrigger>
+          </TabsList>
+          <TabsContent value={filter}>
+            <div className="mt-4 space-y-2">
+              {filteredTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between space-x-2"
+                >
+                  <div className="flex items-center space-x-2">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-5 w-5 rounded-full p-0"
+                      onClick={() => toggleTask(task.id)}
                     >
-                      <Circle className="h-4 w-4" />
-                      <span className="sr-only">Mark as complete</span>
+                      {task.completed ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Circle className="h-5 w-5" />
+                      )}
                     </Button>
-                    <span className="flex-1 text-sm">{task.title}</span>
-                  </div>
-                ))}
-                {activeTasks.length === 0 && (
-                  <p className="text-center text-sm text-gray-500">
-                    No active tasks
-                  </p>
-                )}
-              </div>
-            </TabsContent>
-            <TabsContent value="completed" className="mt-4">
-              <div className="space-y-2">
-                {completedTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center space-x-2 opacity-50"
-                    onClick={() => toggleTask(task.id)}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 rounded-full p-0 text-green-500"
+                    <span
+                      className={`${
+                        task.completed ? "line-through text-gray-500" : ""
+                      }`}
                     >
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span className="sr-only">Mark as incomplete</span>
-                    </Button>
-                    <span className="flex-1 text-sm line-through">
                       {task.title}
                     </span>
                   </div>
-                ))}
-                {completedTasks.length === 0 && (
-                  <p className="text-center text-sm text-gray-500">
-                    No completed tasks
-                  </p>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteTask(task.id)}
+                  >
+                    <span className="sr-only">Delete</span>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   )

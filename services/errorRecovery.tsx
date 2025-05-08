@@ -1,12 +1,24 @@
 import { Contact } from '../types/contact';
 
+export interface ErrorContext {
+  userId?: string;
+  timestamp: Date;
+  requestId?: string;
+  componentName?: string;
+  additionalInfo?: Record<string, unknown>;
+  stackTrace?: string;
+}
+
 export interface BaseError extends Error {
   details?: {
     code: string;
     message: string;
-    context?: any;
+    context?: ErrorContext;
   };
   type?: string;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  recoverable?: boolean;
+  timestamp: Date;
 }
 
 export interface ImportError extends BaseError {

@@ -2,21 +2,23 @@
 
 import type React from "react"
 
-import { Bell, Menu, MessageSquare, Plus, Settings, User } from "lucide-react"
+import { Bell, ChevronDown, LogOut, Menu, MessageSquare, Plus, Settings, User } from "lucide-react"
+import { useSession, signOut } from "next-auth/react"
+import Image from "next/image"
 import Link from "next/link"
 
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/Avatar"
-import { Button } from "./ui/Button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar/index"
+import { Button } from "@/components/ui/Button/index"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/DropdownMenu"
-import { Input } from "./ui/Input"
+  DropdownMenuGroup,
+} from "@/components/ui/DropdownMenu/index"
+import { Input } from "@/components/ui/Input/index"
 
 import { useSidebar } from "./DashboardSidebar"
 

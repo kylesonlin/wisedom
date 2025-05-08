@@ -1,143 +1,102 @@
+"use client";
+
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { Event } from '@/types/event';
 
-interface Event {
-  id: string;
-  userId: string;
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  type: 'conference' | 'meeting' | 'networking' | 'other';
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  industry: string;
-  metadata: {
-    url?: string;
-    attendees?: string[];
-    notes?: string;
-    reminders?: {
-      time: string;
-      type: 'email' | 'notification';
-    }[];
-  };
-  createdAt: string;
-  updatedAt: string;
+const CACHE_KEY = 'events-cache';
+const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
+
+interface EventFilters {
+  startDate?: Date;
+  endDate?: Date;
+  type?: 'meeting' | 'call' | 'task' | 'reminder';
+  status?: 'upcoming' | 'completed' | 'cancelled';
+  priority?: 'low' | 'medium' | 'high';
+  participants?: string[];
+  location?: string;
+  searchTerm?: string;
+  sortBy?: 'date' | 'priority' | 'status';
+  sortOrder?: 'asc' | 'desc';
 }
 
 interface UseEventsReturn {
   events: Event[];
   loading: boolean;
-  error: string | null;
-  totalEvents: number;
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
-  loadMore: () => Promise<void>;
+  error: Error | null;
+  filterEvents: (filters: EventFilters) => Promise<void>;
   refreshEvents: () => Promise<void>;
-  addEvent: (event: Omit<Event, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateEvent: (id: string, updates: Partial<Event>) => Promise<void>;
+  addEvent: (event: Omit<Event, 'id'>) => Promise<void>;
+  updateEvent: (id: string, event: Partial<Event>) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
+  searchEvents: (query: string) => Promise<void>;
 }
-
-const CACHE_KEY = 'events_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const DEFAULT_PAGE_SIZE = 20;
 
 export function useEvents(userId: string): UseEventsReturn {
   const supabase = useSupabaseClient();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [totalEvents, setTotalEvents] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const loadEvents = useCallback(async (pageNum: number = 1, shouldRefresh: boolean = false) => {
+  const getCachedData = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+    
+    const { data, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp > CACHE_DURATION) {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    
+    return data;
+  }, []);
+
+  const setCachedData = useCallback((data: any) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      data,
+      timestamp: Date.now(),
+    }));
+  }, []);
+
+  const loadEvents = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
 
-      // Check cache first if not refreshing
-      if (!shouldRefresh) {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < CACHE_DURATION) {
-            setEvents(data.events);
-            setTotalEvents(data.totalEvents);
-            setHasMore(data.hasMore);
-            setLoading(false);
-            return;
-          }
-        }
+      // Check cache first
+      const cached = getCachedData();
+      if (cached) {
+        setEvents(cached);
+        setLoading(false);
+        return;
       }
 
-      // Get total count
-      const { count, error: countError } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('userId', userId);
-
-      if (countError) throw countError;
-      setTotalEvents(count || 0);
-
-      // Get paginated events
-      const { data: eventsData, error: eventsError } = await supabase
+      const { data, error } = await supabase
         .from('events')
         .select('*')
         .eq('userId', userId)
-        .order('startDate', { ascending: true })
-        .range((pageNum - 1) * pageSize, pageNum * pageSize - 1);
+        .order('startDate', { ascending: true });
 
-      if (eventsError) throw eventsError;
+      if (error) throw error;
 
-      const newEvents = eventsData || [];
-
-      if (pageNum === 1) {
-        setEvents(newEvents);
-      } else {
-        setEvents(prev => [...prev, ...newEvents]);
-      }
-
-      setHasMore(newEvents.length === pageSize);
-
-      // Update cache
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        events: pageNum === 1 ? newEvents : [...events, ...newEvents],
-        totalEvents: count || 0,
-        hasMore: newEvents.length === pageSize,
-        timestamp: Date.now(),
-      }));
-
+      setEvents(data);
+      setCachedData(data);
     } catch (err) {
       console.error('Error loading events:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load events');
+      setError(err instanceof Error ? err : new Error('Failed to load events'));
     } finally {
       setLoading(false);
     }
-  }, [userId, supabase, pageSize]);
+  }, [userId, supabase, getCachedData, setCachedData]);
 
   useEffect(() => {
     if (userId) {
-      loadEvents(1, true);
+      loadEvents();
     }
   }, [userId, loadEvents]);
 
-  const loadMore = async () => {
-    if (!hasMore || loading) return;
-    const nextPage = page + 1;
-    setPage(nextPage);
-    await loadEvents(nextPage);
-  };
-
-  const refreshEvents = async () => {
-    setPage(1);
-    await loadEvents(1, true);
-  };
-
-  const addEvent = async (event: Omit<Event, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+  const addEvent = async (event: Omit<Event, 'id'>) => {
     try {
       const { data, error } = await supabase
         .from('events')
@@ -148,30 +107,20 @@ export function useEvents(userId: string): UseEventsReturn {
       if (error) throw error;
 
       setEvents(prev => [data, ...prev]);
-      setTotalEvents(prev => prev + 1);
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data: cacheData, timestamp } = JSON.parse(cached);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          ...cacheData,
-          events: [data, ...cacheData.events],
-          totalEvents: cacheData.totalEvents + 1,
-          timestamp,
-        }));
-      }
+      setCachedData([data, ...events]);
     } catch (err) {
       console.error('Error adding event:', err);
-      setError(err instanceof Error ? err.message : 'Failed to add event');
+      setError(err instanceof Error ? err : new Error('Failed to add event'));
     }
   };
 
-  const updateEvent = async (id: string, updates: Partial<Event>) => {
+  const updateEvent = async (id: string, event: Partial<Event>) => {
     try {
       const { data, error } = await supabase
         .from('events')
-        .update(updates)
+        .update(event)
         .eq('id', id)
         .eq('userId', userId)
         .select()
@@ -180,24 +129,16 @@ export function useEvents(userId: string): UseEventsReturn {
       if (error) throw error;
 
       setEvents(prev =>
-        prev.map(event => (event.id === id ? { ...event, ...data } : event))
+        prev.map(e => (e.id === id ? { ...e, ...data } : e))
       );
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data: cacheData, timestamp } = JSON.parse(cached);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          ...cacheData,
-          events: cacheData.events.map((event: Event) =>
-            event.id === id ? { ...event, ...data } : event
-          ),
-          timestamp,
-        }));
-      }
+      setCachedData(
+        events.map(e => (e.id === id ? { ...e, ...data } : e))
+      );
     } catch (err) {
       console.error('Error updating event:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update event');
+      setError(err instanceof Error ? err : new Error('Failed to update event'));
     }
   };
 
@@ -211,38 +152,103 @@ export function useEvents(userId: string): UseEventsReturn {
 
       if (error) throw error;
 
-      setEvents(prev => prev.filter(event => event.id !== id));
-      setTotalEvents(prev => prev - 1);
+      setEvents(prev => prev.filter(e => e.id !== id));
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data: cacheData, timestamp } = JSON.parse(cached);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          ...cacheData,
-          events: cacheData.events.filter((event: Event) => event.id !== id),
-          totalEvents: cacheData.totalEvents - 1,
-          timestamp,
-        }));
-      }
+      setCachedData(events.filter(e => e.id !== id));
     } catch (err) {
       console.error('Error deleting event:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete event');
+      setError(err instanceof Error ? err : new Error('Failed to delete event'));
     }
+  };
+
+  const searchEvents = async (query: string) => {
+    try {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('userId', userId)
+        .ilike('title', `%${query}%`)
+        .order('startDate', { ascending: true });
+
+      if (error) throw error;
+
+      setEvents(data);
+      setCachedData(data);
+    } catch (err) {
+      console.error('Error searching events:', err);
+      setError(err instanceof Error ? err : new Error('Failed to search events'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterEvents = async (filters: EventFilters) => {
+    try {
+      setLoading(true);
+
+      let query = supabase
+        .from('events')
+        .select('*')
+        .eq('userId', userId);
+
+      if (filters.startDate) {
+        query = query.gte('startDate', filters.startDate.toISOString());
+      }
+      if (filters.endDate) {
+        query = query.lte('endDate', filters.endDate.toISOString());
+      }
+      if (filters.type) {
+        query = query.eq('type', filters.type);
+      }
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.priority) {
+        query = query.eq('priority', filters.priority);
+      }
+      if (filters.participants) {
+        query = query.in('participants', filters.participants);
+      }
+      if (filters.location) {
+        query = query.eq('location', filters.location);
+      }
+      if (filters.searchTerm) {
+        query = query.ilike('title', `%${filters.searchTerm}%`);
+      }
+      if (filters.sortBy && filters.sortOrder) {
+        query = query.order(filters.sortBy as string, { ascending: filters.sortOrder === 'asc' });
+      }
+
+      const { data, error } = await query.order('startDate', { ascending: true });
+
+      if (error) throw error;
+
+      setEvents(data);
+      setCachedData(data);
+    } catch (err) {
+      console.error('Error filtering events:', err);
+      setError(err instanceof Error ? err : new Error('Failed to filter events'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshEvents = async () => {
+    await loadEvents();
   };
 
   return {
     events,
     loading,
     error,
-    totalEvents,
-    page,
-    pageSize,
-    hasMore,
-    loadMore,
+    filterEvents,
     refreshEvents,
     addEvent,
     updateEvent,
     deleteEvent,
+    searchEvents,
   };
 } 

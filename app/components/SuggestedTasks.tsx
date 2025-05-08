@@ -4,11 +4,18 @@ import * as React from "react"
 import { useState } from "react"
 import { CheckCircle2, Circle, Clock, MessageSquare, Phone, UserPlus } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar"
-import { Button } from "@/components/ui/Button"
-import { Badge } from "@/components/ui/Badge"
-import { Separator } from "@/components/ui/Useparator"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card"
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Button,
+  Badge,
+  Separator,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui"
 
 const tasks = [
   {

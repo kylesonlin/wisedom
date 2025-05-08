@@ -1,26 +1,85 @@
 import { Interaction } from './interaction';
 
-export interface Contact {
-  id: string;
-  userId: string;
-  email: string;
-  phone?: string;
-  firstName?: string;
-  lastName?: string;
-  company?: string;
-  title?: string;
-  avatar?: string;
-  birthday?: Date;
-  notes?: string;
-  source?: string;
-  importance?: number;
-  urgency?: number;
-  assignedTo?: string;
+export interface ContactMetadata {
+  lastInteraction?: Date;
+  nextFollowUp?: Date;
   relationshipStrength?: number;
   tags?: string[];
-  additionalFields?: Record<string, any>;
+  notes?: string;
+  customFields?: Record<string, string | number | boolean | null>;
+}
+
+export interface ContactSettings {
+  notifications?: {
+    email?: boolean;
+    push?: boolean;
+    frequency?: 'daily' | 'weekly' | 'monthly';
+  };
+  privacy?: {
+    isPublic?: boolean;
+    sharedWith?: string[];
+  };
+  display?: {
+    showAvatar?: boolean;
+    showStats?: boolean;
+    layout?: 'compact' | 'detailed';
+  };
+  preferences?: {
+    contactMethod?: 'email' | 'phone' | 'any';
+    timezone?: string;
+    language?: string;
+  };
+}
+
+export interface ContactFilterOptions {
+  status?: 'active' | 'inactive' | 'archived';
+  category?: string[];
+  tags?: string[];
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+  searchTerm?: string;
+  sortBy?: 'name' | 'date' | 'status';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface ContactSortOptions {
+  field: keyof Contact;
+  direction: 'asc' | 'desc';
+  customComparator?: (a: Contact, b: Contact) => number;
+}
+
+export interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  role?: string;
+  status: 'active' | 'inactive' | 'archived';
+  category?: string;
   createdAt: Date;
   updatedAt: Date;
+  lastContactedAt?: Date;
+  nextFollowUpDate?: Date;
+  additionalFields?: Record<string, string | number | boolean | null>;
+  metadata?: ContactMetadata;
+  settings?: ContactSettings;
+  relationships?: {
+    userId: string;
+    type: 'primary' | 'secondary' | 'team';
+    permissions: Array<'view' | 'edit' | 'delete'>;
+  }[];
+}
+
+export interface ContactListOptions {
+  filterOptions: ContactFilterOptions;
+  sortOptions: ContactSortOptions;
+  pagination?: {
+    page: number;
+    limit: number;
+  };
 }
 
 export interface Activity {

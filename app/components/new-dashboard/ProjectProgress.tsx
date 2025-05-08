@@ -1,11 +1,12 @@
 "use client"
 
+import * as React from "react"
 import { useEffect, useState } from "react"
 import { createClient } from "@supabase/supabase-js"
 
-import { Button } from "./ui/Button"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/Card"
-import { Progress } from "./ui/Progress"
+import { Button } from "@/components/ui/Button/index"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card/index"
+import { Progress } from "@/components/ui/Progress/index"
 
 interface Project {
   id: string

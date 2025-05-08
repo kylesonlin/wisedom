@@ -10,6 +10,9 @@ export const generateMockProject = (overrides = {}): Project => ({
   startDate: new Date('2024-01-01'),
   endDate: new Date('2024-12-31'),
   status: 'inuprogress',
+  priority: 'medium',
+  ownerId: 'user1',
+  contacts: [],
   tasks: [
     {
       id: '1',
@@ -36,8 +39,8 @@ export const generateMockProject = (overrides = {}): Project => ({
     }
   ],
   teamMembers: [
-    { id: 'user1', name: 'User 1', role: 'member' },
-    { id: 'user2', name: 'User 2', role: 'member' }
+    { userId: 'user1', role: 'member', joinedAt: new Date('2024-01-01') },
+    { userId: 'user2', role: 'member', joinedAt: new Date('2024-01-01') }
   ],
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
@@ -60,12 +63,18 @@ export const generateMockContact = (overrides = {}): Contact => ({
 
 export const generateMockInteraction = (overrides = {}): Interaction => ({
   id: '1',
+  userId: 'user1',
   contactId: '1',
   type: 'meeting',
   timestamp: new Date('2024-01-15').toISOString(),
   notes: 'Test meeting',
   sentiment: 0.8,
   topics: [],
+  content: 'Test interaction content',
+  summary: 'Test interaction summary',
+  priority: 'medium',
+  status: 'completed',
+  followUpNeeded: false,
   ...overrides
 });
 
@@ -139,10 +148,10 @@ export const viewportSizes = {
 
 // Browser compatibility testing
 export const browserFeatures = {
-  webSocket: typeof WebSocket !== 'undefined',
-  localStorage: typeof localStorage !== 'undefined',
-  indexedDB: typeof indexedDB !== 'undefined',
-  serviceWorker: 'serviceWorker' in navigator
+  webSocket: typeof window !== 'undefined' && typeof WebSocket !== 'undefined',
+  localStorage: typeof window !== 'undefined' && typeof localStorage !== 'undefined',
+  indexedDB: typeof window !== 'undefined' && typeof indexedDB !== 'undefined',
+  serviceWorker: typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator
 };
 
 // Environment variable testing

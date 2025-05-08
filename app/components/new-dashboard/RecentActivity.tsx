@@ -1,11 +1,12 @@
 "use client"
 
+import * as React from "react"
 import { useEffect, useState } from "react"
 import { createClient } from "@supabase/supabase-js"
 
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/Avatar"
-import { Button } from "./ui/Button"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/Card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar/index"
+import { Button } from "@/components/ui/Button/index"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card/index"
 
 const activities = [
   {

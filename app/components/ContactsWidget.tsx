@@ -55,10 +55,18 @@ const contacts = [
 ]
 
 export function ContactsWidget() {
+  const [searchQuery, setSearchQuery] = React.useState("")
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center gap-2 mb-4">
-        <Input placeholder="Search contacts..." className="h-8" />
+        <Input 
+          type="text"
+          placeholder="Search contacts..." 
+          className="h-8"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
         <Button variant="outline" size="sm" className="shrink-0">
           Filter
         </Button>

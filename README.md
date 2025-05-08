@@ -1,86 +1,70 @@
-# Dashboard Application
+# Dashboard Widget System
 
-A modern, customizable dashboard application built with Next.js, TypeScript, and Supabase.
+A modern, type-safe dashboard widget system built with Next.js, React, and TypeScript.
 
 ## Features
 
-- Customizable widget layout
-- Drag and drop widget reordering
-- Real-time data updates
-- AI-powered action suggestions
-- Relationship strength tracking
-- Contact management
-- Project tracking
-
-## Prerequisites
-
-- Node.js 18.x or later
-- npm or yarn
-- Supabase account
-- Vercel account (for deployment)
+- 🎯 Type-safe widget system with Zod validation
+- 🔄 Real-time widget updates and reordering
+- 🎨 Customizable widget layouts and themes
+- 📱 Responsive design with mobile support
+- 🐛 Comprehensive error tracking with Sentry
+- ✅ Full test coverage with Jest and React Testing Library
 
 ## Getting Started
 
+### Prerequisites
+
+- Node.js 16.x or later
+- npm or yarn
+
+### Installation
+
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd <project-directory>
+git clone https://github.com/yourusername/dashboard-widgets.git
+cd dashboard-widgets
 ```
 
 2. Install dependencies:
 ```bash
 npm install
-# or
-yarn install
 ```
 
 3. Set up environment variables:
 ```bash
 cp .env.example .env.local
 ```
-Edit `.env.local` with your configuration values.
+Edit `.env.local` and add your Sentry DSN:
+```
+NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
+```
 
-4. Run the development server:
+4. Start the development server:
 ```bash
 npm run dev
-# or
-yarn dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+### Running Tests
 
-## Deployment
+```bash
+# Run tests
+npm test
 
-The application is configured for deployment on Vercel:
-
-1. Push your code to GitHub
-2. Import the repository in Vercel
-3. Configure environment variables in Vercel dashboard
-4. Deploy!
-
-## Development
-
-### Project Structure
-
-```
-├── app/
-│   ├── components/
-│   │   └── new-dashboard/
-│   │       └── DashboardLayout.tsx
-│   ├── hooks/
-│   │   └── useWidgets.ts
-│   └── page.tsx
-├── public/
-└── ...
+# Run tests with coverage
+npm run test:coverage
 ```
 
-### Available Scripts
+## Project Structure
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
-- `npm run test` - Run tests
+```
+├── app/                    # Next.js app directory
+│   └── components/        # React components
+├── hooks/                 # Custom React hooks
+├── services/             # Business logic and services
+├── types/                # TypeScript type definitions
+└── __tests__/           # Test files
+```
 
 ## Contributing
 
@@ -92,4 +76,4 @@ The application is configured for deployment on Vercel:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 

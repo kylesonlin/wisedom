@@ -1,107 +1,70 @@
-interface PerformanceMetric {
-  name: string;
-  startTime: number;
-  duration: number;
-  metadata?: Record<string, any>;
+interface PerformanceMetadata {
+  component?: string;
+  action?: string;
+  userId?: string;
+  sessionId?: string;
+  route?: string;
+  timestamp?: number;
+  environment?: string;
+  version?: string;
+  customData?: Record<string, string | number | boolean | null>;
 }
 
-class PerformanceMonitor {
-  private static instance: PerformanceMonitor;
-  private metrics: PerformanceMetric[] = [];
-  private marks: Map<string, number> = new Map();
+interface PerformanceEntry {
+  name: string;
+  duration: number;
+  startTime: number;
+  metadata?: PerformanceMetadata;
+}
 
-  private constructor() {}
+export class PerformanceMonitor {
+  private entries: PerformanceEntry[] = [];
+  private slowThreshold: number;
 
-  public static getInstance(): PerformanceMonitor {
-    if (!PerformanceMonitor.instance) {
-      PerformanceMonitor.instance = new PerformanceMonitor();
-    }
-    return PerformanceMonitor.instance;
+  constructor(slowThreshold: number = 1000) {
+    this.slowThreshold = slowThreshold;
   }
 
-  public mark(name: string): void {
-    this.marks.set(name, performance.now());
-  }
-
-  public measure(name: string, startMark: string, metadata?: Record<string, any>): void {
-    const startTime = this.marks.get(startMark);
-    if (!startTime) {
-      console.warn(`Start mark "${startMark}" not found for measurement "${name}"`);
+  public measure(name: string, startMark: string, metadata?: PerformanceMetadata): void {
+    const start = performance.getEntriesByName(startMark)[0];
+    if (!start) {
+      console.warn(`Start mark "${startMark}" not found`);
       return;
     }
 
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-
-    this.metrics.push({
+    const duration = performance.now() - start.startTime;
+    const entry: PerformanceEntry = {
       name,
-      startTime,
       duration,
-      metadata,
-    });
+      startTime: start.startTime,
+      metadata: {
+        ...metadata,
+        timestamp: Date.now(),
+      },
+    };
 
-    // Clean up the start mark
-    this.marks.delete(startMark);
+    this.entries.push(entry);
 
-    // Report to analytics if duration exceeds threshold
-    if (duration > 1000) { // 1 second threshold
+    if (duration > this.slowThreshold) {
       this.reportSlowPerformance(name, duration, metadata);
     }
   }
 
-  private reportSlowPerformance(name: string, duration: number, metadata?: Record<string, any>): void {
-    console.warn(`Slow performance detected: ${name} took ${duration}ms`, metadata);
-    // TODO: Send to analytics service
+  public getEntries(): PerformanceEntry[] {
+    return this.entries;
   }
 
-  public getMetrics(): PerformanceMetric[] {
-    return this.metrics;
+  public clearEntries(): void {
+    this.entries = [];
   }
 
-  public clearMetrics(): void {
-    this.metrics = [];
-    this.marks.clear();
-  }
-
-  public async captureNavigationTiming(): Promise<void> {
-    if (typeof window === 'undefined') return;
-
-    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    if (!navigation) return;
-
-    const timing = {
-      dnsLookup: navigation.domainLookupEnd - navigation.domainLookupStart,
-      tcpConnection: navigation.connectEnd - navigation.connectStart,
-      serverResponse: navigation.responseEnd - navigation.requestStart,
-      domLoad: navigation.domContentLoadedEventEnd - navigation.responseEnd,
-      resourceLoad: navigation.loadEventEnd - navigation.loadEventStart,
-      totalTime: navigation.loadEventEnd - navigation.startTime,
-    };
-
-    this.metrics.push({
-      name: 'navigationutiming',
-      startTime: navigation.startTime,
-      duration: timing.totalTime,
-      metadata: timing,
+  private reportSlowPerformance(name: string, duration: number, metadata?: PerformanceMetadata): void {
+    console.warn(`Slow performance detected for "${name}":`, {
+      duration,
+      threshold: this.slowThreshold,
+      metadata,
     });
-  }
-
-  public async captureResourceTiming(): Promise<void> {
-    if (typeof window === 'undefined') return;
-
-    const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-    const resourceMetrics = resources.map(resource => ({
-      name: `resource-${resource.name}`,
-      startTime: resource.startTime,
-      duration: resource.duration,
-      metadata: {
-        type: resource.initiatorType,
-        size: resource.transferSize,
-      },
-    }));
-
-    this.metrics.push(...resourceMetrics);
   }
 }
 
-export const performanceMonitor = PerformanceMonitor.getInstance(); 
+export const performanceMonitor = new PerformanceMonitor(); 

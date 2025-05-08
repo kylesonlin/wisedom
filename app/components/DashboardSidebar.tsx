@@ -24,12 +24,18 @@ import {
 import Link from "next/link"
 import { useMobile } from "@/components/ui"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
-import { Separator } from "@/components/ui/Separator"
-import { Sheet, SheetContent } from "@/components/ui/Sheet"
-import { ScrollArea } from "@/components/ui/ScrollArea"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/Tooltip"
+import {
+  Button,
+  Input,
+  Separator,
+  Sheet,
+  SheetContent,
+  ScrollArea,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui"
 
 interface SidebarContextType {
   expanded: boolean

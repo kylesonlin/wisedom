@@ -4,14 +4,13 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 
-import { Button } from "./ui/Button"
-import { ScrollArea } from "./ui/ScrollArea"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/Tooltip"
+import { cn } from "@/lib/utils"
 import {
   BarChart3,
   Calendar,
   ChevronsLeft,
   ChevronsRight,
+  FileText,
   Home,
   LayoutDashboard,
   MessageSquare,
@@ -19,6 +18,19 @@ import {
   Settings,
   Users,
 } from "lucide-react"
+
+import { Button } from "@/components/ui/Button/index"
+import { ScrollArea } from "@/components/ui/ScrollArea/index"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/Tooltip/index"
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/NavigationMenu/index"
 
 interface SidebarContextType {
   expanded: boolean

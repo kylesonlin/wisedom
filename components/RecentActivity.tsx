@@ -8,13 +8,40 @@ import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { formatDistanceToNow } from 'date-fns';
 
+interface ActivityMetadata {
+  status?: 'pending' | 'completed' | 'cancelled';
+  priority?: 'low' | 'medium' | 'high';
+  category?: string;
+  tags?: string[];
+  location?: string;
+  participants?: string[];
+  attachments?: Array<{
+    name: string;
+    url: string;
+    type: string;
+    size: number;
+  }>;
+  customData?: Record<string, string | number | boolean | null>;
+}
+
 interface Activity {
   id: string;
   type: 'task_created' | 'task_completed' | 'contact_added' | 'contact_updated' | 'project_created' | 'project_updated' | 'meeting_scheduled' | 'note_added';
   title: string;
   description: string | null;
-  metadata: Record<string, any>;
   createdAt: string;
+  userId: string;
+  metadata: ActivityMetadata;
+}
+
+interface RecentActivityProps {
+  activities: Activity[];
+  onActivityClick?: (activity: Activity) => void;
+  maxItems?: number;
+  showHeader?: boolean;
+  showTimestamp?: boolean;
+  showDescription?: boolean;
+  className?: string;
 }
 
 const activityIcons: Record<Activity['type'], string> = {

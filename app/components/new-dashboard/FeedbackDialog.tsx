@@ -1,11 +1,10 @@
 "use client"
 
-import type React from "react"
-
+import * as React from "react"
 import { useState } from "react"
 import { Send } from "lucide-react"
 
-import { Button } from "./ui/Button"
+import { Button } from "@/components/ui/Button/index"
 import {
   Dialog,
   DialogContent,
@@ -13,11 +12,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./ui/Dialog"
-import { Label } from "./ui/Label"
-import { RadioGroup, RadioGroupItem } from "./ui/RadioGroup"
-import { Textarea } from "./ui/Textarea"
-import { useToast } from "../../hooks/use-toast"
+  DialogTrigger,
+} from "@/components/ui/Dialog/index"
+import { Label } from "@/components/ui/Label/index"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup/index"
+import { Textarea } from "@/components/ui/Textarea/index"
+import { useToast } from "@/components/ui/useToast"
 
 interface FeedbackDialogProps {
   open: boolean

@@ -14,11 +14,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/Dialog"
-import { Label } from "@/components/ui/Label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup"
-import { Textarea } from "@/components/ui/Textarea"
-import { useToast } from "@/components/ui/UseToast"
+} from "@/components/ui/Dialog/index"
+import { Label } from "@/components/ui/Label/index"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup/index"
+import { Textarea } from "@/components/ui/Textarea/index"
+import { useToast } from "@/components/ui/useToast"
 
 interface FeedbackDialogProps {
   open: boolean
@@ -85,7 +85,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                 id="feedback"
                 placeholder="Tell us what you think..."
                 value={feedbackText}
-                onValueChange={(value: string) => setFeedbackText(value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFeedbackText(e.target.value)}
                 className="min-h-[100px]"
                 required
               />

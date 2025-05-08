@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Contact, Activity } from '../types/contact';
@@ -21,8 +23,8 @@ interface UseContactsReturn {
   deleteActivity: (id: string) => Promise<void>;
 }
 
-const CACHE_KEY = 'contacts_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_KEY = 'contacts-cache';
+const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
 const DEFAULT_PAGE_SIZE = 20;
 
 export function useContacts(userId: string): UseContactsReturn {
@@ -36,6 +38,28 @@ export function useContacts(userId: string): UseContactsReturn {
   const [totalContacts, setTotalContacts] = useState(0);
   const [hasMore, setHasMore] = useState(true);
 
+  const getCachedData = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+    
+    const { data, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp > CACHE_DURATION) {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    
+    return data;
+  }, []);
+
+  const setCachedData = useCallback((data: any) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      data,
+      timestamp: Date.now(),
+    }));
+  }, []);
+
   const loadContacts = useCallback(async (pageNum: number = 1, shouldRefresh: boolean = false) => {
     try {
       setLoading(true);
@@ -43,17 +67,14 @@ export function useContacts(userId: string): UseContactsReturn {
 
       // Check cache first if not refreshing
       if (!shouldRefresh) {
-        const cached = localStorage.getItem(CACHE_KEY);
+        const cached = getCachedData();
         if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < CACHE_DURATION) {
-            setContacts(data.contacts);
-            setActivities(data.activities);
-            setTotalContacts(data.totalContacts);
-            setHasMore(data.hasMore);
-            setLoading(false);
-            return;
-          }
+          setContacts(cached.contacts);
+          setActivities(cached.activities);
+          setTotalContacts(cached.totalContacts);
+          setHasMore(cached.hasMore);
+          setLoading(false);
+          return;
         }
       }
 
@@ -101,13 +122,12 @@ export function useContacts(userId: string): UseContactsReturn {
       setHasMore(newContacts.length === pageSize);
 
       // Update cache
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
+      setCachedData({
         contacts: pageNum === 1 ? newContacts : [...contacts, ...newContacts],
         activities: pageNum === 1 ? newActivities : [...activities, ...newActivities],
         totalContacts: count || 0,
         hasMore: newContacts.length === pageSize,
-        timestamp: Date.now(),
-      }));
+      });
 
     } catch (err) {
       console.error('Error loading contacts:', err);
@@ -115,7 +135,7 @@ export function useContacts(userId: string): UseContactsReturn {
     } finally {
       setLoading(false);
     }
-  }, [userId, supabase, pageSize]);
+  }, [userId, supabase, pageSize, getCachedData, setCachedData]);
 
   useEffect(() => {
     if (userId) {
@@ -149,16 +169,10 @@ export function useContacts(userId: string): UseContactsReturn {
       setTotalContacts(prev => prev + 1);
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data: cacheData, timestamp } = JSON.parse(cached);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          ...cacheData,
-          contacts: [data, ...cacheData.contacts],
-          totalContacts: cacheData.totalContacts + 1,
-          timestamp,
-        }));
-      }
+      setCachedData({
+        contacts: [data, ...contacts],
+        totalContacts: totalContacts + 1,
+      });
     } catch (err) {
       console.error('Error adding contact:', err);
       setError(err instanceof Error ? err.message : 'Failed to add contact');
@@ -182,17 +196,12 @@ export function useContacts(userId: string): UseContactsReturn {
       );
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data: cacheData, timestamp } = JSON.parse(cached);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          ...cacheData,
-          contacts: cacheData.contacts.map((contact: Contact) =>
-            contact.id === id ? { ...contact, ...data } : contact
-          ),
-          timestamp,
-        }));
-      }
+      setCachedData({
+        contacts: contacts.map((contact: Contact) =>
+          contact.id === id ? { ...contact, ...data } : contact
+        ),
+        totalContacts: totalContacts,
+      });
     } catch (err) {
       console.error('Error updating contact:', err);
       setError(err instanceof Error ? err.message : 'Failed to update contact');
@@ -214,17 +223,11 @@ export function useContacts(userId: string): UseContactsReturn {
       setTotalContacts(prev => prev - 1);
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data: cacheData, timestamp } = JSON.parse(cached);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          ...cacheData,
-          contacts: cacheData.contacts.filter((contact: Contact) => contact.id !== id),
-          activities: cacheData.activities.filter((activity: Activity) => activity.contactId !== id),
-          totalContacts: cacheData.totalContacts - 1,
-          timestamp,
-        }));
-      }
+      setCachedData({
+        contacts: contacts.filter((contact: Contact) => contact.id !== id),
+        activities: activities.filter((activity: Activity) => activity.contactId !== id),
+        totalContacts: totalContacts - 1,
+      });
     } catch (err) {
       console.error('Error deleting contact:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete contact');
@@ -263,15 +266,10 @@ export function useContacts(userId: string): UseContactsReturn {
       setActivities(prev => [data, ...prev]);
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data: cacheData, timestamp } = JSON.parse(cached);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          ...cacheData,
-          activities: [data, ...cacheData.activities],
-          timestamp,
-        }));
-      }
+      setCachedData({
+        activities: [data, ...activities],
+        totalContacts: totalContacts,
+      });
     } catch (err) {
       console.error('Error adding activity:', err);
       setError(err instanceof Error ? err.message : 'Failed to add activity');
@@ -300,17 +298,12 @@ export function useContacts(userId: string): UseContactsReturn {
       );
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data: cacheData, timestamp } = JSON.parse(cached);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          ...cacheData,
-          activities: cacheData.activities.map((activity: Activity) =>
-            activity.id === id ? { ...activity, ...data } : activity
-          ),
-          timestamp,
-        }));
-      }
+      setCachedData({
+        activities: activities.map((activity: Activity) =>
+          activity.id === id ? { ...activity, ...data } : activity
+        ),
+        totalContacts: totalContacts,
+      });
     } catch (err) {
       console.error('Error updating activity:', err);
       setError(err instanceof Error ? err.message : 'Failed to update activity');
@@ -330,15 +323,10 @@ export function useContacts(userId: string): UseContactsReturn {
       setActivities(prev => prev.filter(activity => activity.id !== id));
 
       // Update cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data: cacheData, timestamp } = JSON.parse(cached);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          ...cacheData,
-          activities: cacheData.activities.filter((activity: Activity) => activity.id !== id),
-          timestamp,
-        }));
-      }
+      setCachedData({
+        activities: activities.filter((activity: Activity) => activity.id !== id),
+        totalContacts: totalContacts,
+      });
     } catch (err) {
       console.error('Error deleting activity:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete activity');

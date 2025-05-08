@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useWidgets } from '@/hooks/useWidgets';
@@ -14,24 +14,84 @@ import AIActionSuggestions from '@/components/AIActionSuggestions';
 // Base widget props interface
 interface BaseWidgetProps {
   id: string;
-  settings?: Record<string, any>;
+  settings?: WidgetSettings;
+}
+
+// Widget settings interface
+interface WidgetSettings {
+  position?: 'top' | 'bottom' | 'left' | 'right';
+  size?: 'small' | 'medium' | 'large';
+  refreshInterval?: number;
+  showHeader?: boolean;
+  showFooter?: boolean;
+  customStyles?: Record<string, string>;
+  [key: string]: unknown;
 }
 
 // Specific widget props interfaces
 interface ContactCardProps extends BaseWidgetProps {
-  name?: string;
-  email?: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  role?: string;
+  company?: string;
+  lastContact?: Date;
 }
 
-interface AIActionSuggestionsProps {
-  suggestions?: any[];
-  onActionSelect?: (action: any) => void;
+interface AIActionSuggestionsProps extends BaseWidgetProps {
+  suggestions: Array<{
+    id: string;
+    contactId: string;
+    contactName: string;
+    type: 'email' | 'call' | 'meeting' | 'followuup';
+    priority: 'high' | 'medium' | 'low';
+    reason: string;
+    suggestedAction: string;
+    suggestedTime: Date;
+    confidence?: number;
+    notes?: string;
+  }>;
+  onActionSelect: (suggestion: AIActionSuggestionsProps['suggestions'][0]) => void;
+}
+
+interface NetworkOverviewProps extends BaseWidgetProps {
+  connections: number;
+  activeContacts: number;
+  pendingRequests: number;
+  recentActivity: Array<{
+    id: string;
+    type: 'connection' | 'message' | 'meeting';
+    timestamp: Date;
+    description: string;
+  }>;
+}
+
+interface RelationshipStrengthProps extends BaseWidgetProps {
+  metrics: Array<{
+    contactId: string;
+    name: string;
+    score: number;
+    lastInteraction: Date;
+    trend: 'increasing' | 'decreasing' | 'stable';
+  }>;
+}
+
+interface ActionItemsProps extends BaseWidgetProps {
+  items: Array<{
+    id: string;
+    title: string;
+    priority: 'low' | 'medium' | 'high';
+    dueDate: Date;
+    completed: boolean;
+    assignedTo?: string;
+    category: 'follow-up' | 'meeting' | 'task' | 'other';
+  }>;
 }
 
 // Widget component type with proper type casting
 type WidgetComponent = React.ComponentType<BaseWidgetProps>;
 
-// Helper function to cast widget components
+// Helper function to cast widget components with improved type safety
 const castWidgetComponent = <T extends BaseWidgetProps>(
   component: React.ComponentType<T>
 ): WidgetComponent => {
@@ -41,10 +101,13 @@ const castWidgetComponent = <T extends BaseWidgetProps>(
 // Wrapper component for AIActionSuggestions
 const AIActionSuggestionsWrapper: WidgetComponent = (props) => {
   const { settings } = props;
+  const suggestions = settings?.suggestions as AIActionSuggestionsProps['suggestions'] || [];
+  const onActionSelect = settings?.onActionSelect as AIActionSuggestionsProps['onActionSelect'] || (() => {});
+  
   return (
     <AIActionSuggestions
-      suggestions={settings?.suggestions}
-      onActionSelect={settings?.onActionSelect}
+      suggestions={suggestions}
+      onActionSelect={onActionSelect}
     />
   );
 };
@@ -55,7 +118,11 @@ interface Widget {
   component: WidgetComponent;
   enabled: boolean;
   order: number;
-  settings?: Record<string, any>;
+  settings?: WidgetSettings;
+  type: 'contact-card' | 'network-overview' | 'relationship-strength' | 'action-items' | 'ai-suggestions';
+  description?: string;
+  category?: 'analytics' | 'contacts' | 'tasks' | 'ai' | 'other';
+  permissions?: Array<'read' | 'write' | 'delete'>;
 }
 
 interface DashboardLayoutProps {
@@ -65,6 +132,11 @@ interface DashboardLayoutProps {
   onWidgetReorder?: (id: string, newOrder: number) => void;
   onSavePreferences?: (preferences: Record<string, boolean>) => void;
   initialPreferences?: Record<string, boolean>;
+  layout?: 'grid' | 'list';
+  maxColumns?: 1 | 2 | 3 | 4;
+  spacing?: 'compact' | 'normal' | 'wide';
+  allowReordering?: boolean;
+  allowCustomization?: boolean;
 }
 
 // Cache key and duration
@@ -73,16 +145,21 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Error boundary component for widgets
 class WidgetErrorBoundary extends React.Component<
-  { children: React.ReactNode; widgetId: string },
+  { children: React.ReactNode; widgetId: string; onError?: (error: Error) => void },
   { hasError: boolean; error: Error | null }
 > {
-  constructor(props: { children: React.ReactNode; widgetId: string }) {
+  constructor(props: { children: React.ReactNode; widgetId: string; onError?: (error: Error) => void }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error(`Widget ${this.props.widgetId} error:`, error, errorInfo);
+    this.props.onError?.(error);
   }
 
   render() {
@@ -123,6 +200,9 @@ const defaultWidgets: Widget[] = [
     component: castWidgetComponent(NetworkOverview),
     enabled: true,
     order: 0,
+    type: 'network-overview',
+    category: 'analytics',
+    permissions: ['read'],
   },
   {
     id: 'contact-card',
@@ -130,9 +210,14 @@ const defaultWidgets: Widget[] = [
     component: castWidgetComponent(ContactCard),
     enabled: true,
     order: 1,
+    type: 'contact-card',
+    category: 'contacts',
+    permissions: ['read', 'write'],
     settings: {
       name: 'Demo User',
       email: 'demo@example.com',
+      role: 'Software Engineer',
+      company: 'Tech Corp',
     },
   },
   {
@@ -141,6 +226,9 @@ const defaultWidgets: Widget[] = [
     component: castWidgetComponent(RelationshipStrength),
     enabled: true,
     order: 2,
+    type: 'relationship-strength',
+    category: 'analytics',
+    permissions: ['read'],
   },
   {
     id: 'action-items',
@@ -148,6 +236,9 @@ const defaultWidgets: Widget[] = [
     component: castWidgetComponent(ActionItems),
     enabled: true,
     order: 3,
+    type: 'action-items',
+    category: 'tasks',
+    permissions: ['read', 'write', 'delete'],
   },
   {
     id: 'ai-suggestions',
@@ -155,6 +246,9 @@ const defaultWidgets: Widget[] = [
     component: AIActionSuggestionsWrapper,
     enabled: true,
     order: 4,
+    type: 'ai-suggestions',
+    category: 'ai',
+    permissions: ['read'],
   },
 ];
 
@@ -173,29 +267,45 @@ export default function DashboardLayout({
   const [isReordering, setIsReordering] = useState(false);
 
   // Use widgets from props if provided, otherwise from state
-  const widgets = (widgetsProp || widgetsState) as Widget[];
+  const widgets = useMemo(() => {
+    const mergedWidgets = widgetsProp || widgetsState;
+    if (!Array.isArray(mergedWidgets)) {
+      console.error('Invalid widgets data received');
+      return defaultWidgets;
+    }
+    return mergedWidgets as Widget[];
+  }, [widgetsProp, widgetsState]);
 
   // Cache management
   const getCachedWidgets = useCallback(() => {
     if (typeof window === 'undefined') return null;
-    const cached = localStorage.getItem(WIDGET_CACHE_KEY);
-    if (!cached) return null;
-    
-    const { data, timestamp } = JSON.parse(cached);
-    if (Date.now() - timestamp > CACHE_DURATION) {
-      localStorage.removeItem(WIDGET_CACHE_KEY);
+    try {
+      const cached = localStorage.getItem(WIDGET_CACHE_KEY);
+      if (!cached) return null;
+      
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp > CACHE_DURATION) {
+        localStorage.removeItem(WIDGET_CACHE_KEY);
+        return null;
+      }
+      
+      return data as Widget[];
+    } catch (error) {
+      console.error('Error reading from cache:', error);
       return null;
     }
-    
-    return data as Widget[];
   }, []);
 
   const setCachedWidgets = useCallback((data: Widget[]) => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(WIDGET_CACHE_KEY, JSON.stringify({
-      data,
-      timestamp: Date.now(),
-    }));
+    try {
+      localStorage.setItem(WIDGET_CACHE_KEY, JSON.stringify({
+        data,
+        timestamp: Date.now(),
+      }));
+    } catch (error) {
+      console.error('Error writing to cache:', error);
+    }
   }, []);
 
   // Sync available widgets with enabled/disabled state
@@ -263,17 +373,27 @@ export default function DashboardLayout({
     document.body.style.cursor = 'default';
   };
 
-  const handleAddWidget = (widgetId: string) => {
-    const widget = availableWidgets.find((w) => w.id === widgetId);
-    if (widget) {
-      toggleWidget(widgetId, true);
-      setShowAddWidget(false);
+  const handleAddWidget = useCallback((widgetId: string) => {
+    try {
+      const widget = availableWidgets.find((w) => w.id === widgetId);
+      if (widget) {
+        toggleWidget(widgetId, true);
+        setShowAddWidget(false);
+      }
+    } catch (error) {
+      console.error('Error adding widget:', error);
+      // You might want to show a user-friendly error message here
     }
-  };
+  }, [availableWidgets, toggleWidget]);
 
-  const handleRemoveWidget = (widgetId: string) => {
-    toggleWidget(widgetId, false);
-  };
+  const handleRemoveWidget = useCallback((widgetId: string) => {
+    try {
+      toggleWidget(widgetId, false);
+    } catch (error) {
+      console.error('Error removing widget:', error);
+      // You might want to show a user-friendly error message here
+    }
+  }, [toggleWidget]);
 
   const enabledWidgets = widgets.filter((w: Widget) => w.enabled);
   const disabledWidgets = availableWidgets.filter((w: Widget) => !w.enabled);
@@ -441,8 +561,17 @@ export default function DashboardLayout({
                 </div>
               </div>
               <Suspense fallback={<WidgetLoading />}>
-                <WidgetErrorBoundary widgetId={widget.id}>
-                  <widget.component id={widget.id} settings={widget.settings} />
+                <WidgetErrorBoundary 
+                  widgetId={widget.id}
+                  onError={(error) => {
+                    console.error(`Widget ${widget.id} failed:`, error);
+                    // You might want to report this error to your error tracking service
+                  }}
+                >
+                  <widget.component 
+                    id={widget.id} 
+                    settings={widget.settings} 
+                  />
                 </WidgetErrorBoundary>
               </Suspense>
             </Card>

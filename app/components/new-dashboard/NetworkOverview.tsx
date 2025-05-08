@@ -1,11 +1,12 @@
 "use client"
 
+import * as React from "react"
 import { useState } from "react"
 import { BarChart, LineChart, PieChart } from "lucide-react"
 
-import { Button } from "./ui/Button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/Tabs"
+import { Button } from "@/components/ui/Button/index"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card/index"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs/index"
 
 export function NetworkOverview() {
   const [timeframe, setTimeframe] = useState("month")

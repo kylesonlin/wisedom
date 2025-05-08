@@ -1,0 +1,34 @@
+{
+  "widgets": [
+    {
+      "id": "network-overview",
+      "title": "Network Overview",
+      "enabled": true,
+      "order": 0
+    },
+    {
+      "id": "contact-card",
+      "title": "Contact Card",
+      "enabled": true,
+      "order": 1
+    },
+    {
+      "id": "relationship-strength",
+      "title": "Relationship Strength",
+      "enabled": false,
+      "order": 2
+    },
+    {
+      "id": "action-items",
+      "title": "Action Items",
+      "enabled": false,
+      "order": 3
+    },
+    {
+      "id": "ai-suggestions",
+      "title": "AI Suggestions",
+      "enabled": false,
+      "order": 4
+    }
+  ]
+} 

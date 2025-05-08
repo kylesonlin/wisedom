@@ -1,21 +1,22 @@
 "use client"
 
 import * as React from "react"
-
 import { Bell, Menu, MessageSquare, Plus, Settings, User } from "lucide-react"
 import Link from "next/link"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar"
-import { Button } from "@/components/ui/Button"
 import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu"
-import { Input } from "@/components/ui/Input"
+  Input
+} from "@/components/ui"
 
 import { useSidebar } from "./DashboardSidebar"
 

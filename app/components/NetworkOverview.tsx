@@ -2,11 +2,19 @@
 
 import * as React from "react"
 import { useState } from "react"
-import { BarChart, LineChart, PieChart } from "lucide-react"
-
-import { Button } from "@/components/ui/Button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs"
+import { BarChart2, Users } from "lucide-react"
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui"
 
 import { cn } from "@/lib/utils"
 
@@ -63,7 +71,7 @@ export default function NetworkOverview() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-center">
-                  <LineChart className="h-16 w-16 text-primary" />
+                  <BarChart2 className="h-16 w-16 text-primary" />
                 </div>
               </CardContent>
             </Card>
@@ -77,7 +85,7 @@ export default function NetworkOverview() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-center">
-                  <BarChart className="h-16 w-16 text-primary" />
+                  <BarChart2 className="h-16 w-16 text-primary" />
                 </div>
               </CardContent>
             </Card>
@@ -87,7 +95,7 @@ export default function NetworkOverview() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-center">
-                  <PieChart className="h-16 w-16 text-primary" />
+                  <Users className="h-16 w-16 text-primary" />
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-1 text-xs">
                   <div className="flex items-center gap-1">
@@ -119,7 +127,7 @@ export default function NetworkOverview() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-center h-48">
-                <LineChart className="h-32 w-32 text-primary" />
+                <BarChart2 className="h-32 w-32 text-primary" />
               </div>
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between text-sm">
@@ -146,7 +154,7 @@ export default function NetworkOverview() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-center h-48">
-                <BarChart className="h-32 w-32 text-primary" />
+                <BarChart2 className="h-32 w-32 text-primary" />
               </div>
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between text-sm">

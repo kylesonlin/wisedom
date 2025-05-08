@@ -1,5 +1,4 @@
-import { Card } from './ui/Card';
-import { Button } from './ui/Button';
+import { cn } from "@/lib/utils";
 
 interface ActionItem {
   id: string;
@@ -35,10 +34,17 @@ export default function ActionItems() {
   ];
 
   return (
-    <Card className="p-4">
+    <div className={cn("rounded-lg border bg-card text-card-foreground shadow-sm p-4")}>
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-medium">Action Items</h3>
-        <Button variant="outline" size="sm">Add New</Button>
+        <button
+          className={cn(
+            "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors",
+            "h-9 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+          )}
+        >
+          Add New
+        </button>
       </div>
       <div className="space-y-3">
         {actionItems.map((item) => (
@@ -74,6 +80,6 @@ export default function ActionItems() {
           </div>
         ))}
       </div>
-    </Card>
+    </div>
   );
 } 

@@ -1,13 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Mail, Phone, Star } from "lucide-react"
+import * as React from "react"
+import { Check, Plus, Search, Mail, Phone, Star } from "lucide-react"
 import { createClient } from "@supabase/supabase-js"
 
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/Avatar"
-import { Button } from "./ui/Button"
-import { Card, CardContent } from "./ui/Card"
-import { Input } from "./ui/Input"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar/index"
+import { Button } from "@/components/ui/Button/index"
+import { Card, CardContent } from "@/components/ui/Card/index"
+import { Input } from "@/components/ui/Input/index"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/Popover/index"
+import { ScrollArea } from "@/components/ui/ScrollArea/index"
+import { cn } from "@/lib/utils"
 
 // Supabase client setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -15,11 +18,11 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const supabase = createClient(supabaseUrl!, supabaseAnonKey!)
 
 function useContacts() {
-  const [contacts, setContacts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [contacts, setContacts] = React.useState<any[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
 
-  useEffect(() => {
+  React.useEffect(() => {
     async function fetchContacts() {
       setLoading(true)
       setError(null)
