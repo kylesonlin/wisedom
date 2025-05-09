@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectItem } from '@/components/ui/Select';
 import { Card } from '@/components/ui/Card';
 import { toast } from '@/utils/toast';
 import { getSupabaseClient } from '@/utils/supabase';
@@ -82,12 +82,16 @@ export function ContactActivityForm({
             Activity Type
           </label>
           <Select
-            id="type"
             value={formData.type}
             onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
-            options={ACTIVITY_TYPES}
             required
-          />
+          >
+            {ACTIVITY_TYPES.map(option => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </Select>
         </div>
 
         <div>
