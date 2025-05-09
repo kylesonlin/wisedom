@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/utils/supabase';
 
 // Database types
 export type Profile = {
@@ -51,17 +51,8 @@ if (missingEnvVars.length > 0) {
   throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
 }
 
-// Create Supabase client
-export const getSupabaseClient = () => {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-};
-
 // Database helper functions
 export const getProfile = async (userId: string) => {
-  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -72,7 +63,6 @@ export const getProfile = async (userId: string) => {
 };
 
 export const createProfile = async (profile: Omit<Profile, 'id' | 'createdAt' | 'updatedAt'>) => {
-  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('profiles')
     .insert([{
@@ -87,7 +77,6 @@ export const createProfile = async (profile: Omit<Profile, 'id' | 'createdAt' | 
 };
 
 export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
-  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('profiles')
     .update({
@@ -103,7 +92,6 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
 
 // Storage helper functions
 export const uploadAvatar = async (userId: string, file: File) => {
-  const supabase = getSupabaseClient();
   const fileExt = file.name.split('.').pop();
   const fileName = `${userId}-${Math.random()}.${fileExt}`;
   const filePath = `${userId}/${fileName}`;
@@ -122,7 +110,6 @@ export const uploadAvatar = async (userId: string, file: File) => {
 };
 
 export const uploadProjectFile = async (projectId: string, file: File) => {
-  const supabase = getSupabaseClient();
   const fileExt = file.name.split('.').pop();
   const fileName = `${projectId}-${Math.random()}.${fileExt}`;
   const filePath = `${projectId}/${fileName}`;

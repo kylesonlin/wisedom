@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/utils/supabase';
 import { jwtDecode } from 'jwt-decode';
 
 // Types
@@ -39,12 +39,6 @@ interface TOTPFactor {
   };
   friendly_name?: string;
 }
-
-// Create Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 // Session management
 export const getSession = async (): Promise<Session | null> => {

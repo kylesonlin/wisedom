@@ -3,20 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
-import { createClient } from '@supabase/supabase-js';
 import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Modal from '@/components/Modal';
 import ContactForm from '@/components/ContactForm';
 import { Contact } from '@/types/contact';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '@/utils/supabase';
 
 export default function RolodexClient() {
   const [contacts, setContacts] = useState<Contact[]>([]);

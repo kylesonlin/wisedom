@@ -1,7 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import { z } from 'zod';
+import { supabase } from '@/utils/supabase';
 
 // Types
 export interface TwoFactorSetup {
@@ -26,12 +26,6 @@ export const twoFactorVerifySchema = z.object({
   code: z.string().length(6),
   isBackupCode: z.boolean().optional(),
 });
-
-// Create Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 // Generate a new TOTP secret
 export const generateTOTPSecret = (): string => {

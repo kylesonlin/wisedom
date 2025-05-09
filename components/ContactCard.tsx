@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/utils/supabase';
 
 interface Conversation {
   id: string;
@@ -19,11 +19,6 @@ interface ContactCardProps {
   position?: string;
   imageUrl?: string;
 }
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 function isDate(val: unknown): val is Date {
   return val instanceof Date && !isNaN(val.getTime());
