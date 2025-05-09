@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { SettingsLayout } from '../layout';
+import Layout from '../layout';
 
 export const metadata: Metadata = {
   title: 'Security Settings | Contact Management System',
@@ -12,8 +12,8 @@ export default function SecurityLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SettingsLayout>
+    <Layout>
       {children}
-    </SettingsLayout>
+    </Layout>
   );
 } 

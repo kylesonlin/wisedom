@@ -7,7 +7,7 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY');
 }
 
-const supabaseClient = createClient(
+export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   {
@@ -18,5 +18,4 @@ const supabaseClient = createClient(
   }
 );
 
-export const supabase = supabaseClient;
-export const getSupabaseClient = () => supabaseClient; 
+export const getSupabaseClient = () => supabase; 
