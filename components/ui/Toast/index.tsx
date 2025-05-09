@@ -118,6 +118,25 @@ type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
 
 type ToastActionElement = React.ReactElement<typeof ToastAction>
 
+export const toast = {
+  success: (message: string) => {
+    // Implementation will be added
+    console.log('Success:', message);
+  },
+  error: (message: string) => {
+    // Implementation will be added
+    console.log('Error:', message);
+  },
+  warning: (message: string) => {
+    // Implementation will be added
+    console.log('Warning:', message);
+  },
+  info: (message: string) => {
+    // Implementation will be added
+    console.log('Info:', message);
+  }
+};
+
 export {
   type ToastProps,
   type ToastActionElement,

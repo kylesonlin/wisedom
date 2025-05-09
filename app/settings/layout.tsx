@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: 'Manage your account settings and preferences.',
 };
 
-export function SettingsLayout({
+export default function Layout({
   children,
 }: {
   children: React.ReactNode;
@@ -19,12 +19,4 @@ export function SettingsLayout({
       </main>
     </div>
   );
-}
-
-export default function Layout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <SettingsLayout>{children}</SettingsLayout>;
 } 
