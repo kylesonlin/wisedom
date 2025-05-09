@@ -1,14 +1,23 @@
-import { Suspense } from 'react';
-import { TwoFactorVerification } from '@/components/auth/TwoFactorVerification';
-import { getSession } from '@/utils/auth';
 import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { TwoFactorVerification } from '@/components/auth/TwoFactorVerification';
+
+interface ExtendedSession {
+  user: {
+    id: string;
+    email: string;
+    name?: string;
+  };
+  requiresTwoFactor?: boolean;
+}
 
 export default async function TwoFactorPage({
   searchParams,
 }: {
   searchParams: { callbackUrl?: string };
 }) {
-  const session = await getSession();
+  const session = (await getServerSession()) as ExtendedSession | null;
+
   if (!session) {
     redirect('/auth/signin');
   }
@@ -17,22 +26,5 @@ export default async function TwoFactorPage({
     redirect(searchParams.callbackUrl || '/dashboard');
   }
 
-  return (
-    <div className="container mx-auto py-8">
-      <Suspense fallback={<div>Loading...</div>}>
-        <TwoFactorVerification
-          onSuccess={() => {
-            if (searchParams.callbackUrl) {
-              redirect(searchParams.callbackUrl);
-            } else {
-              redirect('/dashboard');
-            }
-          }}
-          onCancel={() => {
-            redirect('/auth/signin');
-          }}
-        />
-      </Suspense>
-    </div>
-  );
+  return <TwoFactorVerification />;
 } 
