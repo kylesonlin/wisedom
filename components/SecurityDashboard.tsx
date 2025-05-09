@@ -4,10 +4,23 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { toast } from '@/components/ui/Toast';
+import { toast } from '@/lib/toast';
+
+interface SecurityEvent {
+  type: string;
+  timestamp: string;
+  severity: 'default' | 'secondary' | 'destructive' | 'outline';
+}
+
+interface SecurityStatus {
+  twoFactorEnabled: boolean;
+  lastLogin: string | null;
+  activeDevices: number;
+  securityEvents: SecurityEvent[];
+}
 
 export function SecurityDashboard() {
-  const [securityStatus, setSecurityStatus] = useState({
+  const [securityStatus, setSecurityStatus] = useState<SecurityStatus>({
     twoFactorEnabled: false,
     lastLogin: null,
     activeDevices: 0,
@@ -24,11 +37,7 @@ export function SecurityDashboard() {
       const data = await response.json();
       setSecurityStatus(data);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch security status',
-        type: 'error',
-      });
+      toast.error('Failed to fetch security status');
     }
   };
 
@@ -40,7 +49,7 @@ export function SecurityDashboard() {
         <Card className="p-6">
           <h2 className="text-lg font-semibold mb-4">Two-Factor Authentication</h2>
           <div className="flex items-center justify-between">
-            <Badge variant={securityStatus.twoFactorEnabled ? 'success' : 'warning'}>
+            <Badge variant={securityStatus.twoFactorEnabled ? 'default' : 'destructive'}>
               {securityStatus.twoFactorEnabled ? 'Enabled' : 'Disabled'}
             </Badge>
             <Button onClick={() => window.location.href = '/settings/security/2fa'}>
