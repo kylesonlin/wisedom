@@ -1,6 +1,5 @@
-import { supabase } from '@/utils/supabase';
+// Moved from utils/supabase.tsx
 
-// Database types
 export type Profile = {
   id: string;
   username: string;
@@ -31,28 +30,12 @@ export type Task = {
   dueDate: string;
 };
 
-// Storage bucket names
 export const STORAGE_BUCKETS = {
   AVATARS: 'avatars',
   PROJECT_FILES: 'projectufiles',
 } as const;
 
-// Validate environment variables
-const requiredEnvVars = {
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-};
-
-const missingEnvVars = Object.entries(requiredEnvVars)
-  .filter(([_, value]) => !value)
-  .map(([key]) => key);
-
-if (missingEnvVars.length > 0) {
-  throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
-}
-
-// Database helper functions
-export const getProfile = async (userId: string) => {
+export const getProfile = async (supabase: any, userId: string) => {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -62,7 +45,7 @@ export const getProfile = async (userId: string) => {
   return data as Profile;
 };
 
-export const createProfile = async (profile: Omit<Profile, 'id' | 'createdAt' | 'updatedAt'>) => {
+export const createProfile = async (supabase: any, profile: Omit<Profile, 'id' | 'createdAt' | 'updatedAt'>) => {
   const { data, error } = await supabase
     .from('profiles')
     .insert([{
@@ -76,7 +59,7 @@ export const createProfile = async (profile: Omit<Profile, 'id' | 'createdAt' | 
   return data as Profile;
 };
 
-export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
+export const updateProfile = async (supabase: any, userId: string, updates: Partial<Profile>) => {
   const { data, error } = await supabase
     .from('profiles')
     .update({
@@ -90,8 +73,7 @@ export const updateProfile = async (userId: string, updates: Partial<Profile>) =
   return data as Profile;
 };
 
-// Storage helper functions
-export const uploadAvatar = async (userId: string, file: File) => {
+export const uploadAvatar = async (supabase: any, userId: string, file: File) => {
   const fileExt = file.name.split('.').pop();
   const fileName = `${userId}-${Math.random()}.${fileExt}`;
   const filePath = `${userId}/${fileName}`;
@@ -109,7 +91,7 @@ export const uploadAvatar = async (userId: string, file: File) => {
   return publicUrl;
 };
 
-export const uploadProjectFile = async (projectId: string, file: File) => {
+export const uploadProjectFile = async (supabase: any, projectId: string, file: File) => {
   const fileExt = file.name.split('.').pop();
   const fileName = `${projectId}-${Math.random()}.${fileExt}`;
   const filePath = `${projectId}/${fileName}`;
