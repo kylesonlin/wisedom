@@ -3,11 +3,11 @@
 import * as React from "react"
 import { Bookmark, ExternalLink, Share2, ThumbsUp } from "lucide-react"
 
-import { Button } from "@/components/ui/Button/index"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs/index"
-import { Badge } from "@/components/ui/Badge/index"
-import { Separator } from "@/components/ui/Separator/index"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card/index"
+import { Button } from "@/components/ui/Button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs"
+import { Badge } from "@/components/ui/Badge"
+import { Separator } from "@/components/ui/Separator"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
 
 const newsItems = [
   {

@@ -4,9 +4,9 @@ import * as React from "react"
 import { useEffect, useState } from "react"
 import { createClient } from "@supabase/supabase-js"
 
-import { Button } from "@/components/ui/Button/index"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card/index"
-import { Progress } from "@/components/ui/Progress/index"
+import { Button } from "@/components/ui/Button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card"
+import { Progress } from "@/components/ui/Progress"
 
 interface Project {
   id: string

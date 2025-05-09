@@ -4,11 +4,11 @@ import * as React from "react"
 import { useEffect, useState } from "react"
 import { createClient } from "@supabase/supabase-js"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar/index"
-import { Button } from "@/components/ui/Button/index"
-import { Badge } from "@/components/ui/Badge/index"
-import { Separator } from "@/components/ui/Separator/index"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card/index"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar"
+import { Button } from "@/components/ui/Button"
+import { Badge } from "@/components/ui/Badge"
+import { Separator } from "@/components/ui/Separator"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card"
 
 interface Task {
   id: string

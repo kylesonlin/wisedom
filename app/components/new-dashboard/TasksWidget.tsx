@@ -5,10 +5,10 @@ import { useEffect, useState } from "react"
 import { createClient } from "@supabase/supabase-js"
 import { CheckCircle2, Circle, Plus, X } from "lucide-react"
 
-import { Button } from "@/components/ui/Button/index"
-import { Card, CardContent } from "@/components/ui/Card/index"
-import { Input } from "@/components/ui/Input/index"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs/index"
+import { Button } from "@/components/ui/Button"
+import { Card, CardContent } from "@/components/ui/Card"
+import { Input } from "@/components/ui/Input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs"
 
 interface Task {
   id: string
