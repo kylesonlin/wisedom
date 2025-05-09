@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogClose
-} from './ui/Dialog/index';
+} from './ui/Dialog';
 import { Button } from './ui/Button';
 
 export default function DialogTest() {
