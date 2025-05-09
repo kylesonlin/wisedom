@@ -11,7 +11,7 @@ export { Switch } from "./Switch"
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./Tabs"
 export { Toaster } from "./Toaster"
 export { Toggle } from "./Toggle"
-export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./Tooltip/index"
+export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./Tooltip"
 export { Sidebar } from "./Sidebar"
 
 // Layout Components
@@ -25,7 +25,7 @@ export { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbS
 export { Calendar } from "./Calendar"
 export { Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandShortcut, CommandSeparator } from "./Command"
 export { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuCheckboxItem, ContextMenuRadioItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuShortcut, ContextMenuGroup, ContextMenuPortal, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuRadioGroup } from "./ContextMenu"
-export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "./Dialog/index"
+export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "./Dialog"
 export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuRadioItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuGroup, DropdownMenuPortal, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuRadioGroup } from "./DropdownMenu"
 export { Form, FormItem, FormLabel, FormControl, FormDescription, FormMessage, FormField } from "./Form"
 export { HoverCard, HoverCardTrigger, HoverCardContent } from "./HoverCard"
