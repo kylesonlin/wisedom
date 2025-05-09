@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectItem, SelectValue } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { Calendar, MessageSquare, Phone, Mail, FileText, MoreHorizontal } from 'lucide-react';
 import { toast } from '@/utils/toast';
@@ -101,22 +101,24 @@ export function ContactActivityTimeline({ contactId, onActivitySelect }: Contact
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        <Select
-          value={filter.type}
-          onValueChange={(value) => {
-            setFilter(prev => ({ ...prev, type: value }));
-            loadActivities();
-          }}
-          options={[
-            { value: '', label: 'All Types' },
-            ...Object.entries(ACTIVITY_TYPES).map(([value, { label }]) => ({
-              value,
-              label
-            }))
-          ]}
-          placeholder="Filter by type"
-          className="w-48"
-        />
+        <div className="w-48">
+          <Select
+            value={filter.type}
+            onValueChange={(value) => {
+              setFilter(prev => ({ ...prev, type: value }));
+              loadActivities();
+            }}
+          >
+            <SelectValue />
+            <SelectItem value="" disabled>Filter by type</SelectItem>
+            <SelectItem value="">All Types</SelectItem>
+            {Object.entries(ACTIVITY_TYPES).map(([value, { label }]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </Select>
+        </div>
         <Input
           value={filter.search}
           onChange={(e) => {
