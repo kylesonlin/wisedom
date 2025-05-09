@@ -89,11 +89,10 @@ export default function RolodexClient() {
   const filteredContacts = contacts.filter(contact => {
     const searchLower = searchQuery?.toLowerCase() ?? '';
     return (
-      contact.firstName?.toLowerCase().includes(searchLower) ||
-      contact.lastName?.toLowerCase().includes(searchLower) ||
+      contact.name?.toLowerCase().includes(searchLower) ||
       contact.email?.toLowerCase().includes(searchLower) ||
       contact.company?.toLowerCase().includes(searchLower) ||
-      contact.title?.toLowerCase().includes(searchLower)
+      contact.role?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -156,11 +155,11 @@ export default function RolodexClient() {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-lg font-semibold">
-                  {contact.firstName} {contact.lastName}
+                  {contact.name}
                 </h3>
-                {contact.title && contact.company && (
+                {contact.role && contact.company && (
                   <p className="text-gray-600 text-sm">
-                    {contact.title} at {contact.company}
+                    {contact.role} at {contact.company}
                   </p>
                 )}
               </div>
@@ -181,8 +180,8 @@ export default function RolodexClient() {
                 </p>
               )}
             </div>
-            {contact.notes && (
-              <p className="mt-2 text-sm text-gray-600 line-clamp-2">{contact.notes}</p>
+            {contact.metadata?.notes && (
+              <p className="mt-2 text-sm text-gray-600 line-clamp-2">{contact.metadata.notes}</p>
             )}
             <div className="mt-4 flex justify-end space-x-2">
               <button

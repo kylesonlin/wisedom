@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Contact as BaseContact } from '../types/contact';
+import { Contact } from '../types/contact';
 import { FollowUpSuggestion } from '../utils/aiAnalysis';
 import { getScheduledFollowUps, updateFollowUpStatus } from '../utils/followUpScheduling';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -11,11 +11,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-interface Contact extends BaseContact {
-  firstName?: string;
-  lastName?: string;
-}
 
 export default function ScheduledFollowUps() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -47,17 +42,23 @@ export default function ScheduledFollowUps() {
       if (contactsError) throw contactsError;
       setContacts(
         (contactsData || []).map(c => ({
-          ...c,
-          createdAt: c.createdAt ? new Date(c.createdAt) : undefined,
-          updatedAt: c.updatedAt ? new Date(c.updatedAt) : undefined,
-          birthday: c.birthday ?? undefined,
+          id: c.id || '',
+          firstName: c.firstName || '',
+          lastName: c.lastName || '',
+          name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Unknown',
+          email: c.email || '',
+          status: c.status || 'active',
+          createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+          updatedAt: c.updatedAt ? new Date(c.updatedAt) : new Date(),
+          birthday: c.birthday ? new Date(c.birthday) : undefined,
           phone: c.phone ?? undefined,
           company: c.company ?? undefined,
           title: c.title ?? undefined,
-          assignedTo: c.assignedTo ?? undefined,
           notes: c.notes ?? undefined,
-          source: c.source ?? undefined,
           additionalFields: c.additionalFields ?? undefined,
+          metadata: c.metadata ?? undefined,
+          settings: c.settings ?? undefined,
+          relationships: c.relationships ?? undefined,
         }))
       );
 
@@ -147,7 +148,7 @@ export default function ScheduledFollowUps() {
         </label>
         <select
           value={selectedTimeframe}
-          onValueChange={(value: string) => setSelectedTimeframe(value as 'day' | 'week' | 'month')}
+          onChange={(e) => setSelectedTimeframe(e.target.value as 'day' | 'week' | 'month')}
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         >
           <option value="day">Next 24 Hours</option>

@@ -10,8 +10,8 @@ import {
   DialogDescription,
   DialogFooter,
   DialogClose
-} from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
+} from './ui/Dialog/index';
+import { Button } from './ui/Button';
 
 export default function DialogTest() {
   const [formData, setFormData] = useState({ name: '', email: '' });

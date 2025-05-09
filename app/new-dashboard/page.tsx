@@ -9,10 +9,6 @@ import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
 import DashboardLayout from '@/app/components/new-dashboard/DashboardLayout';
 import { useWidgets } from '@/hooks/useWidgets';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import ContactDashboard from '@/components/ContactDashboard';
-import ProjectDashboard from '@/components/ProjectDashboard';
-import DailyUpdates from '@/components/DailyUpdates';
-import ScheduledFollowups from '@/components/ScheduledFollowups';
 
 export default function NewDashboard() {
   const router = useRouter();
@@ -42,23 +38,11 @@ export default function NewDashboard() {
     );
   }
 
-  const widgetComponents = {
-    contacts: ContactDashboard,
-    projects: ProjectDashboard,
-    updates: DailyUpdates,
-    followups: ScheduledFollowups,
-  };
-
-  const enhancedWidgets = widgets.map(widget => ({
-    ...widget,
-    component: widgetComponents[widget.id as keyof typeof widgetComponents] || (() => <div>Widget not found</div>),
-  }));
-
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-gray-50">
         <DashboardLayout
-          widgets={enhancedWidgets}
+          widgets={widgets}
           onWidgetToggle={toggleWidget}
           onWidgetReorder={reorderWidget}
         />

@@ -4,9 +4,9 @@ import * as React from "react"
 import { Calendar } from "./Calendar"
 import { DayPickerSingleProps } from "react-day-picker"
 
-export interface DatePickerProps extends Omit<DayPickerSingleProps, 'mode'> {
+export interface DatePickerProps extends Omit<DayPickerSingleProps, 'mode' | 'onSelect'> {
   initialDate?: Date
-  onSelect?: (date: Date | undefined) => void
+  onSelect: (date: Date | undefined) => void
   onCancel?: () => void
 }
 
@@ -18,10 +18,10 @@ export function DatePicker({
 }: DatePickerProps) {
   const [selected, setSelected] = React.useState<Date | undefined>(initialDate)
 
-  const handleSelect = (date: Date | undefined) => {
+  const handleSelect = React.useCallback((date: Date | undefined) => {
     setSelected(date)
-    onSelect?.(date)
-  }
+    onSelect(date)
+  }, [onSelect])
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-lg">

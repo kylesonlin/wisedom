@@ -160,16 +160,16 @@ export default function IndustryUpdates() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Input
+          <input
             type="text"
             placeholder="Search updates..."
             value={searchQuery}
-            onValueChange={(value: string) => setSearchQuery(value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1"
           />
           <select
             value={selectedRelevance || ''}
-            onValueChange={(value: string) => setSelectedRelevance(value || null)}
+            onChange={(e) => setSelectedRelevance(e.target.value || null)}
             className="rounded-md border border-gray-300 px-3 py-2"
           >
             <option value="">All Relevance</option>
@@ -179,7 +179,7 @@ export default function IndustryUpdates() {
           </select>
           <select
             value={sortBy}
-            onValueChange={(value: string) => setSortBy(value as typeof sortBy)}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
             className="rounded-md border border-gray-300 px-3 py-2"
           >
             <option value="publishedAt">Sort by Date</option>

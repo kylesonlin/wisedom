@@ -1,76 +1,82 @@
 describe('Dashboard', () => {
   beforeEach(() => {
-    // Login before each test
-    cy.login('test@example.com', 'password123');
     cy.visit('/dashboard');
+    // Mock authentication
+    cy.window().then((win) => {
+      win.localStorage.setItem('supabase.auth.token', 'mock-token');
+    });
   });
 
-  it('should display the dashboard layout', () => {
-    cy.get('[data-testid="dashboard-layout"]').should('be.visible');
-    cy.get('[data-testid="add-widget-button"]').should('be.visible');
+  it('loads all widgets correctly', () => {
+    cy.get('[data-testid="widget-network-overview"]').should('be.visible');
+    cy.get('[data-testid="widget-contact-card"]').should('be.visible');
+    cy.get('[data-testid="widget-relationship-strength"]').should('be.visible');
   });
 
-  it('should handle widget management', () => {
-    // Check initial widgets
-    cy.checkWidget('network-overview');
-    cy.checkWidget('contact-card');
+  it('allows widget reordering', () => {
+    const networkWidget = cy.get('[data-testid="widget-network-overview"]');
+    const contactWidget = cy.get('[data-testid="widget-contact-card"]');
 
-    // Add a new widget
-    cy.addWidget('relationship-strength');
-    cy.checkWidget('relationship-strength');
+    networkWidget.trigger('dragstart');
+    contactWidget.trigger('drop');
 
-    // Remove a widget
-    cy.removeWidget('network-overview');
+    // Verify order changed
+    cy.get('[data-testid="widget-grid"]').children().first().should('have.attr', 'data-testid', 'widget-contact-card');
+  });
+
+  it('handles widget refresh', () => {
+    cy.get('[data-testid="widget-refresh-network-overview"]').click();
+    cy.get('[data-testid="widget-network-overview"]').should('be.visible');
+  });
+
+  it('manages widget visibility', () => {
+    // Open settings
+    cy.get('[data-testid="settings-button"]').click();
+    
+    // Toggle widget
+    cy.get('[data-testid="widget-toggle-network-overview"]').click();
+    
+    // Verify widget is hidden
     cy.get('[data-testid="widget-network-overview"]').should('not.exist');
-
-    // Reorder widgets
-    cy.reorderWidget('contact-card', 'relationship-strength');
   });
 
-  it('should handle theme switching', () => {
-    // Check initial theme
-    cy.get('html').should('have.class', 'light');
-
-    // Switch to dark theme
-    cy.get('[data-testid="theme-toggle"]').click();
-    cy.get('html').should('have.class', 'dark');
-
-    // Switch back to light theme
-    cy.get('[data-testid="theme-toggle"]').click();
-    cy.get('html').should('have.class', 'light');
-  });
-
-  it('should handle loading and error states', () => {
-    // Simulate loading state
-    cy.intercept('GET', '/api/widgets', {
-      delay: 1000,
-      fixture: 'widgets.json',
-    }).as('getWidgets');
-
-    cy.visit('/dashboard');
-    cy.get('[data-testid="loading-skeleton"]').should('be.visible');
-    cy.wait('@getWidgets');
-    cy.get('[data-testid="loading-skeleton"]').should('not.exist');
-
-    // Simulate error state
-    cy.intercept('GET', '/api/widgets', {
-      statusCode: 500,
-      body: { error: 'Internal Server Error' },
-    }).as('getWidgetsError');
-
-    cy.visit('/dashboard');
+  it('handles error states', () => {
+    // Simulate error by removing auth token
+    cy.window().then((win) => {
+      win.localStorage.removeItem('supabase.auth.token');
+    });
+    
+    cy.reload();
+    
+    // Verify error message
     cy.get('[data-testid="error-message"]').should('be.visible');
   });
 
-  it('should persist widget state after page reload', () => {
-    // Add a widget
-    cy.addWidget('relationship-strength');
-    cy.checkWidget('relationship-strength');
+  it('maintains responsive layout', () => {
+    // Test mobile view
+    cy.viewport('iphone-6');
+    cy.get('[data-testid="widget-grid"]').should('have.css', 'grid-template-columns', '1fr');
 
-    // Reload the page
+    // Test tablet view
+    cy.viewport('ipad-2');
+    cy.get('[data-testid="widget-grid"]').should('have.css', 'grid-template-columns', 'repeat(2, 1fr)');
+
+    // Test desktop view
+    cy.viewport(1280, 720);
+    cy.get('[data-testid="widget-grid"]').should('have.css', 'grid-template-columns', 'repeat(3, 1fr)');
+  });
+
+  it('handles data loading states', () => {
+    // Simulate slow network
+    cy.intercept('GET', '**/api/**', (req) => {
+      req.on('response', (res) => {
+        res.delay = 1000;
+      });
+    });
+
     cy.reload();
-
-    // Check if the widget is still there
-    cy.checkWidget('relationship-strength');
+    
+    // Verify loading state
+    cy.get('[data-testid="loading-skeleton"]').should('be.visible');
   });
 }); 

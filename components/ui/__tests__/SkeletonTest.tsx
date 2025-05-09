@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react'
-import { Skeleton } from "./Skeleton"
+import '@testing-library/jest-dom'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { cn } from '@/lib/utils'
 
 jest.mock('@/lib/utils', () => ({

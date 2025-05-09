@@ -113,7 +113,7 @@ export default function ContactPrioritization() {
         <h2 className="text-xl font-semibold">Contact Prioritization</h2>
         <select
           value={timeframe}
-          onValueChange={(value: string) => setTimeframe(value as 'day' | 'week' | 'month')}
+          onChange={(e) => setTimeframe(e.target.value as 'day' | 'week' | 'month')}
           className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
         >
           <option value="day">Last 24 Hours</option>

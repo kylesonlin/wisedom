@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSupabaseClient } from '../../../utils/supabase';
-import { withRateLimit } from '../../../middleware/rateLimit';
+import { withRateLimit } from '../../../utils/rate-limiter';
 
 // Validate environment variables
 const requiredEnvVars = {

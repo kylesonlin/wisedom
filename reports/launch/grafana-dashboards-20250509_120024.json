@@ -1,0 +1,11 @@
+{
+    "status": "success",
+    "data": {
+        "dashboards": [
+            {
+                "title": "System Overview",
+                "uid": "system-overview"
+            }
+        ]
+    }
+}

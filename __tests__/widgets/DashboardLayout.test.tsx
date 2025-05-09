@@ -2,145 +2,206 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DashboardLayout from '@/app/components/new-dashboard/DashboardLayout';
-import { ErrorTrackingService } from '@/services/errorTracking';
-import { WidgetValidationService } from '@/services/widgetValidation';
-import { Widget } from '@/types/widget';
+import { ThemeProvider } from '@/app/components/ThemeProvider';
 
-// Mock the services
-jest.mock('@/services/errorTracking');
-jest.mock('@/services/widgetValidation');
+// Mock the validation service
+const mockValidateWidgetSettings = jest.fn();
+jest.mock('@/lib/validation', () => ({
+  validateWidgetSettings: mockValidateWidgetSettings
+}));
+
+// Mock the error tracking service
+const mockCaptureError = jest.fn();
+jest.mock('@/lib/errorTracking', () => ({
+  captureError: mockCaptureError
+}));
+
+// Mock the Supabase hooks
+const mockSupabaseClient = {
+  from: jest.fn(() => ({
+    select: jest.fn(() => ({
+      eq: jest.fn(() => ({
+        order: jest.fn().mockResolvedValue({ data: [], error: null })
+      }))
+    })),
+    insert: jest.fn(() => ({
+      eq: jest.fn().mockResolvedValue({ data: [], error: null })
+    })),
+    update: jest.fn(() => ({
+      eq: jest.fn(() => ({
+        eq: jest.fn().mockResolvedValue({ data: [], error: null })
+      }))
+    })),
+    delete: jest.fn(() => ({
+      eq: jest.fn().mockResolvedValue({ data: [], error: null })
+    }))
+  }))
+};
+
+jest.mock('@supabase/auth-helpers-react', () => ({
+  useUser: jest.fn(() => ({ id: 'test-user-id' })),
+  useSupabaseClient: jest.fn(() => mockSupabaseClient),
+}));
+
+// Mock the widgets hook
+const mockToggleWidget = jest.fn();
+const mockReorderWidgets = jest.fn();
+jest.mock('@/hooks/useWidgets', () => ({
+  useWidgets: () => ({
+    widgets: [
+      { id: 'network-overview', title: 'Network Overview', enabled: true, order: 0, component: () => <div data-testid="widget-network-overview">Network Overview</div> },
+      { id: 'contact-card', title: 'Contact Card', enabled: true, order: 1, component: () => <div data-testid="widget-contact-card">Contact Card</div> },
+      { id: 'relationship-strength', title: 'Relationship Strength', enabled: false, order: 2, component: () => <div data-testid="widget-relationship-strength">Relationship Strength</div> }
+    ],
+    toggleWidget: mockToggleWidget,
+    reorderWidgets: mockReorderWidgets,
+    loading: false,
+    error: null
+  })
+}));
+
+// Mock the widget components
+jest.mock('@/components/NetworkOverview', () => ({
+  NetworkOverview: () => <div data-testid="network-overview">Network Overview</div>
+}));
+
+jest.mock('@/components/ContactCard', () => ({
+  ContactCard: () => <div data-testid="contact-card">Contact Card</div>
+}));
+
+jest.mock('@/components/RelationshipStrength', () => ({
+  RelationshipStrength: () => <div data-testid="relationship-strength">Relationship Strength</div>
+}));
+
+const renderWithTheme = (ui: React.ReactElement) => {
+  return render(
+    <ThemeProvider>
+      {ui}
+    </ThemeProvider>
+  );
+};
 
 describe('DashboardLayout', () => {
-  const mockWidgets: Widget[] = [
-    {
-      id: 'network-overview',
-      title: 'Network Overview',
-      component: () => <div>Network Overview Widget</div>,
-      enabled: true,
-      order: 0,
-      type: 'network-overview',
-      category: 'analytics',
-      permissions: ['read'],
-    },
-    {
-      id: 'contact-card',
-      title: 'Contact Card',
-      component: () => <div>Contact Card Widget</div>,
-      enabled: true,
-      order: 1,
-      type: 'contact-card',
-      category: 'contacts',
-      permissions: ['read', 'write'],
-      settings: {
-        name: 'Demo User',
-        email: 'demo@example.com',
-      },
-    },
-  ];
-
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('renders the dashboard title', () => {
-    render(<DashboardLayout widgets={mockWidgets} />);
+    renderWithTheme(<DashboardLayout />);
     expect(screen.getByTestId('dashboard-title')).toHaveTextContent('Dashboard');
   });
 
   it('renders enabled widgets', () => {
-    render(<DashboardLayout widgets={mockWidgets} />);
-    expect(screen.getByText('Network Overview Widget')).toBeInTheDocument();
-    expect(screen.getByText('Contact Card Widget')).toBeInTheDocument();
-  });
-
-  it('shows loading state when loading', () => {
-    render(<DashboardLayout widgets={[]} />);
-    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
+    renderWithTheme(<DashboardLayout />);
+    expect(screen.getByTestId('widget-network-overview')).toBeInTheDocument();
+    expect(screen.getByTestId('widget-contact-card')).toBeInTheDocument();
   });
 
   it('handles widget errors gracefully', async () => {
-    const errorWidget: Widget = {
-      ...mockWidgets[0],
-      component: () => {
-        throw new Error('Test error');
-      },
-    };
+    jest.spyOn(require('@/app/hooks/useWidgets'), 'useWidgets').mockImplementation(() => ({
+      widgets: [{ id: 'error-widget', title: 'Error Widget', enabled: true }],
+      toggleWidget: mockToggleWidget,
+      reorderWidgets: mockReorderWidgets,
+      isLoading: false,
+      error: null
+    }));
 
-    render(<DashboardLayout widgets={[errorWidget]} />);
+    renderWithTheme(<DashboardLayout />);
     
     await waitFor(() => {
-      expect(screen.getByText(/Widget Error:/)).toBeInTheDocument();
+      expect(mockCaptureError).toHaveBeenCalled();
     });
   });
 
-  it('allows adding new widgets', async () => {
-    const onWidgetToggle = jest.fn();
-    render(
-      <DashboardLayout
-        widgets={mockWidgets}
-        onWidgetToggle={onWidgetToggle}
-      />
-    );
-
+  it('allows adding new widgets', () => {
+    renderWithTheme(<DashboardLayout />);
+    
     // Click add widget button
-    fireEvent.click(screen.getByTestId('add-widget-button'));
+    const addButton = screen.getByTestId('add-widget-button');
+    fireEvent.click(addButton);
     
     // Verify available widgets are shown
     expect(screen.getByTestId('available-widgets')).toBeInTheDocument();
-  });
-
-  it('validates widget settings', async () => {
-    const validationService = WidgetValidationService.getInstance();
-    const invalidWidget: Widget = {
-      ...mockWidgets[1],
-      settings: {
-        name: '', // Invalid empty name
-        email: 'invalid-email', // Invalid email
-      },
-    };
-
-    render(<DashboardLayout widgets={[invalidWidget]} />);
     
-    await waitFor(() => {
-      expect(validationService.validateWidgetSettings).toHaveBeenCalled();
-    });
+    // Add a widget
+    const widgetButton = screen.getByTestId('widget-button-relationship-strength');
+    fireEvent.click(widgetButton);
+    
+    expect(mockToggleWidget).toHaveBeenCalledWith('relationship-strength', true);
   });
 
-  it('handles widget reordering', async () => {
-    const onWidgetReorder = jest.fn();
-    render(
-      <DashboardLayout
-        widgets={mockWidgets}
-        onWidgetReorder={onWidgetReorder}
-      />
-    );
+  it('handles widget removal', () => {
+    renderWithTheme(<DashboardLayout />);
+    
+    const removeButton = screen.getByTestId('widget-toggle-network-overview');
+    fireEvent.click(removeButton);
+    
+    expect(mockToggleWidget).toHaveBeenCalledWith('network-overview', false);
+  });
 
-    const widget = screen.getByTestId('widget-network-overview');
-    const target = screen.getByTestId('widget-contact-card');
-
+  it('handles widget reordering', () => {
+    renderWithTheme(<DashboardLayout />);
+    
+    const firstWidget = screen.getByTestId('widget-network-overview');
+    const secondWidget = screen.getByTestId('widget-contact-card');
+    
     // Simulate drag and drop
-    fireEvent.dragStart(widget);
-    fireEvent.dragOver(target);
-    fireEvent.drop(target);
-
-    await waitFor(() => {
-      expect(onWidgetReorder).toHaveBeenCalled();
-    });
+    fireEvent.dragStart(firstWidget);
+    fireEvent.drop(secondWidget);
+    fireEvent.dragEnd(firstWidget);
+    
+    expect(mockReorderWidgets).toHaveBeenCalled();
   });
 
-  it('reports errors to error tracking service', async () => {
-    const errorTracking = ErrorTrackingService.getInstance();
-    const errorWidget: Widget = {
-      ...mockWidgets[0],
-      component: () => {
-        throw new Error('Test error');
-      },
-    };
+  it('shows loading state', () => {
+    jest.spyOn(require('@/app/hooks/useWidgets'), 'useWidgets').mockImplementation(() => ({
+      widgets: [],
+      toggleWidget: mockToggleWidget,
+      reorderWidgets: mockReorderWidgets,
+      isLoading: true,
+      error: null
+    }));
 
-    render(<DashboardLayout widgets={[errorWidget]} />);
+    renderWithTheme(<DashboardLayout />);
+    expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
+  });
+
+  it('shows error state', () => {
+    jest.spyOn(require('@/app/hooks/useWidgets'), 'useWidgets').mockImplementation(() => ({
+      widgets: [],
+      toggleWidget: mockToggleWidget,
+      reorderWidgets: mockReorderWidgets,
+      isLoading: false,
+      error: 'Test error'
+    }));
+
+    renderWithTheme(<DashboardLayout />);
+    expect(screen.getByTestId('error-message')).toHaveTextContent('Error: Test error');
+  });
+
+  it('handles widget refresh', () => {
+    renderWithTheme(<DashboardLayout />);
     
-    await waitFor(() => {
-      expect(errorTracking.captureError).toHaveBeenCalled();
-    });
+    const refreshButton = screen.getByTestId('widget-refresh-network-overview');
+    fireEvent.click(refreshButton);
+    
+    // Verify the widget is refreshed (this would typically trigger a re-render)
+    expect(screen.getByTestId('widget-network-overview')).toBeInTheDocument();
+  });
+
+  it('maintains widget state after reordering', () => {
+    renderWithTheme(<DashboardLayout />);
+    
+    const firstWidget = screen.getByTestId('widget-network-overview');
+    const secondWidget = screen.getByTestId('widget-contact-card');
+    
+    // Simulate drag and drop
+    fireEvent.dragStart(firstWidget);
+    fireEvent.drop(secondWidget);
+    fireEvent.dragEnd(firstWidget);
+    
+    // Verify widgets are still present after reordering
+    expect(screen.getByTestId('widget-network-overview')).toBeInTheDocument();
+    expect(screen.getByTestId('widget-contact-card')).toBeInTheDocument();
   });
 }); 

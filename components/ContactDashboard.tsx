@@ -134,12 +134,10 @@ export default function ContactDashboard({ initialView = 'list' }: ContactDashbo
     loadSavedViews();
   }, []);
 
-  const getFullName = (contact: Contact) => `${contact.firstName} ${contact.lastName}`.trim();
-
   const filteredContacts = contacts.filter(contact => {
     const searchLower = searchQuery?.toLowerCase() ?? '';
     return (
-      getFullName(contact).toLowerCase().includes(searchLower) ||
+      contact.name?.toLowerCase().includes(searchLower) ||
       contact.email?.toLowerCase().includes(searchLower) ||
       contact.company?.toLowerCase().includes(searchLower) ||
       contact.phone?.toLowerCase().includes(searchLower)
@@ -242,17 +240,34 @@ export default function ContactDashboard({ initialView = 'list' }: ContactDashbo
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-medium">{getFullName(contact)}</h3>
+                  <h3 className="font-medium">{contact.name}</h3>
                   <p className="text-sm text-gray-600">{contact.email}</p>
                   {contact.company && (
                     <p className="text-sm text-gray-500">{contact.company}</p>
                   )}
                 </div>
-                {contact.importance && (
-                  <div className="text-sm font-medium">
-                    Priority: {contact.importance > 0.7 ? 'High' : contact.importance > 0.4 ? 'Medium' : 'Low'}
-                  </div>
-                )}
+                <div className="text-sm text-gray-500">
+                  {contact.lastContactedAt && (
+                    <p>Last Contact: {new Date(contact.lastContactedAt).toLocaleDateString()}</p>
+                  )}
+                  {contact.nextFollowUpDate && (
+                    <p>Next Follow-up: {new Date(contact.nextFollowUpDate).toLocaleDateString()}</p>
+                  )}
+                </div>
+              </div>
+              {contact.metadata?.notes && (
+                <p className="mt-2 text-sm text-gray-600 line-clamp-2">{contact.metadata.notes}</p>
+              )}
+              <div className="mt-4 flex justify-end space-x-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedContact(contact);
+                  }}
+                  className="text-sm text-blue-500 hover:text-blue-600"
+                >
+                  View Details
+                </button>
               </div>
             </div>
           ))}
@@ -264,7 +279,7 @@ export default function ContactDashboard({ initialView = 'list' }: ContactDashbo
           <h2 className="text-xl font-semibold mb-4">Contact Details</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p><span className="font-medium">Name:</span> {getFullName(selectedContact)}</p>
+              <p><span className="font-medium">Name:</span> {selectedContact.name}</p>
               <p><span className="font-medium">Email:</span> {selectedContact.email}</p>
               {selectedContact.phone && (
                 <p><span className="font-medium">Phone:</span> {selectedContact.phone}</p>

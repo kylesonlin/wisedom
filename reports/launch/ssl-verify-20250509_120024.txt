@@ -1,0 +1,1 @@
+/etc/letsencrypt/live/your-domain.com/cert.pem: OK

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, type LayoutProps } from '@/components/Layout';
+import { Layout } from '@/components/Layout';
 import { Button, Badge, Card } from '@/components/ui';
 import { BarChart, LineChart, PieChart } from 'lucide-react';
 

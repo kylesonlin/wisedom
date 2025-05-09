@@ -1,6 +1,10 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { DashboardHeader } from './DashboardHeader';
 import { useSidebar } from './DashboardSidebar';
+
+// Mock the UI components
+jest.mock('@/components/ui', () => require('./__mocks__/ui'));
 
 // Mock the useSidebar hook
 jest.mock('./DashboardSidebar', () => ({
@@ -29,6 +33,16 @@ describe('DashboardHeader', () => {
     jest.clearAllMocks();
   });
 
+  const openSettingsMenu = async () => {
+    const settingsButton = screen.getByRole('button', { name: /settings/i });
+    await act(async () => {
+      fireEvent.click(settingsButton);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('dropdown-content')).toBeInTheDocument();
+    });
+  };
+
   it('renders all main components', () => {
     render(
       <DashboardHeader
@@ -43,7 +57,7 @@ describe('DashboardHeader', () => {
     expect(screen.getByRole('button', { name: /notifications/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /user/i })).toBeInTheDocument();
+    expect(screen.getByText('JD')).toBeInTheDocument();
   });
 
   it('shows notification count', () => {
@@ -60,7 +74,7 @@ describe('DashboardHeader', () => {
     expect(notificationCount).toHaveClass('bg-dashboard-primary', 'text-white');
   });
 
-  it('toggles widgets correctly', () => {
+  it('toggles widgets correctly', async () => {
     render(
       <DashboardHeader
         onToggleWidget={mockToggleWidget}
@@ -70,18 +84,24 @@ describe('DashboardHeader', () => {
     );
 
     // Open settings dropdown
-    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    await openSettingsMenu();
 
     // Toggle network widget
-    fireEvent.click(screen.getByText(/network overview/i));
+    const networkWidget = screen.getByText(/network overview/i);
+    await act(async () => {
+      fireEvent.click(networkWidget);
+    });
     expect(mockToggleWidget).toHaveBeenCalledWith('network');
 
     // Toggle AI insights widget
-    fireEvent.click(screen.getByText(/ai insights/i));
+    const aiWidget = screen.getByText(/ai insights/i);
+    await act(async () => {
+      fireEvent.click(aiWidget);
+    });
     expect(mockToggleWidget).toHaveBeenCalledWith('ai-insights');
   });
 
-  it('opens feedback dialog', () => {
+  it('opens feedback dialog', async () => {
     render(
       <DashboardHeader
         onToggleWidget={mockToggleWidget}
@@ -91,10 +111,13 @@ describe('DashboardHeader', () => {
     );
 
     // Open settings dropdown
-    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    await openSettingsMenu();
 
     // Click feedback button
-    fireEvent.click(screen.getByText(/send feedback/i));
+    const feedbackButton = screen.getByText(/send feedback/i);
+    await act(async () => {
+      fireEvent.click(feedbackButton);
+    });
     expect(mockOpenFeedback).toHaveBeenCalled();
   });
 
@@ -112,7 +135,7 @@ describe('DashboardHeader', () => {
     expect(mockToggleSidebar).toHaveBeenCalled();
   });
 
-  it('shows correct widget checkmarks', () => {
+  it('shows correct widget checkmarks', async () => {
     render(
       <DashboardHeader
         onToggleWidget={mockToggleWidget}
@@ -122,12 +145,12 @@ describe('DashboardHeader', () => {
     );
 
     // Open settings dropdown
-    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    await openSettingsMenu();
 
     // Check visible widgets have checkmarks
     expect(screen.getByText(/network overview ✓/i)).toBeInTheDocument();
     expect(screen.getByText(/project progress ✓/i)).toBeInTheDocument();
-    expect(screen.getByText(/ai insights$/i)).toBeInTheDocument(); // No checkmark
+    expect(screen.getByText(/^ai insights$/i)).toBeInTheDocument(); // No checkmark
   });
 
   it('handles search input', () => {
@@ -158,6 +181,6 @@ describe('DashboardHeader', () => {
     expect(screen.getByRole('button', { name: /notifications/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /user/i })).toBeInTheDocument();
+    expect(screen.getByText('JD')).toBeInTheDocument();
   });
 }); 

@@ -1,0 +1,9 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1234567890
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C=US, O=Let's Encrypt, CN=R3
+        Validity
+            Not Before: Mar 21 00:00:00 2024 GMT
+            Not After : Jun 19 00:00:00 2024 GMT

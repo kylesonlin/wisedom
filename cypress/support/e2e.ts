@@ -45,4 +45,7 @@ beforeEach(() => {
 Cypress.on('uncaught:exception', (err) => {
   // Return false to prevent Cypress from failing the test
   return false;
-}); 
+});
+
+// Prevent TypeScript from reading file as legacy script
+export {}; 

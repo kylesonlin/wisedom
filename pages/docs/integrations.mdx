@@ -1,0 +1,127 @@
+# Integration Guide
+
+This guide will help you set up and configure integrations with various services.
+
+## LinkedIn Integration
+
+### Setup
+
+1. Create a LinkedIn Developer Application
+   - Go to [LinkedIn Developer Portal](https://www.linkedin.com/developers/)
+   - Create a new application
+   - Configure OAuth 2.0 settings
+
+2. Configure Environment Variables
+   ```env
+   LINKEDIN_CLIENT_ID=your_client_id
+   LINKEDIN_CLIENT_SECRET=your_client_secret
+   LINKEDIN_REDIRECT_URI=http://localhost:3000/api/auth/oauth/linkedin/callback
+   ```
+
+3. Enable Required Permissions
+   - `r_liteprofile`
+   - `r_emailaddress`
+   - `w_member_social`
+
+### Usage
+
+```typescript
+// Example of fetching LinkedIn profile
+const response = await fetch('/api/integrations/linkedin/profile', {
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+  },
+});
+```
+
+## Gmail Integration
+
+### Setup
+
+1. Create a Google Cloud Project
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project
+   - Enable Gmail API
+
+2. Configure OAuth Consent Screen
+   - Set up OAuth consent screen
+   - Add required scopes
+   - Configure authorized domains
+
+3. Create OAuth Credentials
+   - Create OAuth 2.0 Client ID
+   - Configure authorized redirect URIs
+
+4. Configure Environment Variables
+   ```env
+   GMAIL_CLIENT_ID=your_client_id
+   GMAIL_CLIENT_SECRET=your_client_secret
+   GMAIL_REDIRECT_URI=http://localhost:3000/api/auth/oauth/gmail/callback
+   ```
+
+### Usage
+
+```typescript
+// Example of fetching Gmail messages
+const response = await fetch('/api/integrations/gmail/messages', {
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+  },
+});
+```
+
+## Calendar Integration
+
+### Setup
+
+1. Enable Google Calendar API
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Enable Calendar API for your project
+
+2. Configure OAuth Scopes
+   - `https://www.googleapis.com/auth/calendar.readonly`
+   - `https://www.googleapis.com/auth/calendar.events`
+
+3. Configure Environment Variables
+   ```env
+   CALENDAR_CLIENT_ID=your_client_id
+   CALENDAR_CLIENT_SECRET=your_client_secret
+   CALENDAR_REDIRECT_URI=http://localhost:3000/api/auth/oauth/calendar/callback
+   ```
+
+### Usage
+
+```typescript
+// Example of fetching calendar events
+const response = await fetch('/api/integrations/calendar/events', {
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+  },
+});
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **OAuth Flow Errors**
+   - Check redirect URIs
+   - Verify client credentials
+   - Ensure required scopes are enabled
+
+2. **API Rate Limits**
+   - Monitor API usage
+   - Implement proper error handling
+   - Use caching when possible
+
+3. **Token Refresh Issues**
+   - Check token expiration
+   - Implement proper refresh logic
+   - Handle refresh errors gracefully
+
+### Support
+
+If you encounter any issues:
+1. Check the [FAQ](/docs/faq)
+2. Review the [API Documentation](/docs/api)
+3. Open an issue on [GitHub](https://github.com/your-repo) 

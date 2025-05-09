@@ -1,0 +1,5 @@
+{
+    "app": {"up": true},
+    "db": {"up": true},
+    "redis": {"up": true}
+}

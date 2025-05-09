@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Button } from './Button';
+import '@testing-library/jest-dom';
+import { Button } from '../Button';
 
 describe('Button', () => {
   it('renders with default props', () => {

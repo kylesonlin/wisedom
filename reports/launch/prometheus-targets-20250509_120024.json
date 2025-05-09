@@ -1,0 +1,14 @@
+{
+    "status": "success",
+    "data": {
+        "activeTargets": [
+            {
+                "labels": {
+                    "job": "prometheus"
+                },
+                "scrapeUrl": "http://localhost:9090/metrics",
+                "state": "up"
+            }
+        ]
+    }
+}

@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
-import { Widget } from '@/types/widget';
+import { Widget, WidgetComponent, BaseWidgetProps } from '@/types/widget';
+import NetworkOverview from '@/components/NetworkOverview';
+import ContactCard from '@/components/ContactCard';
+import RelationshipStrength from '@/components/RelationshipStrength';
+import ActionItems from '@/components/ActionItems';
+import AIActionSuggestions from '@/components/AIActionSuggestions';
 
 const CACHE_KEY = 'widgets-cache';
 const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
@@ -14,6 +19,46 @@ interface UseWidgetsReturn {
   toggleWidget: (widgetId: string, enabled: boolean) => Promise<void>;
   reorderWidget: (widgetId: string, newOrder: number) => Promise<void>;
 }
+
+// Wrapper components that accept BaseWidgetProps
+const NetworkOverviewWrapper: WidgetComponent = () => {
+  return <NetworkOverview />;
+};
+
+const ContactCardWrapper: WidgetComponent = (props) => {
+  const contactProps = {
+    id: props.id,
+    name: "Demo User",
+    email: "demo@example.com",
+    company: "Demo Company",
+    role: "Software Engineer",
+    lastContact: "2024-03-20",
+    nextFollowUp: "2024-03-27",
+    tags: ["client", "tech"],
+    priority: "medium" as const,
+  };
+  return <ContactCard {...contactProps} />;
+};
+
+const RelationshipStrengthWrapper: WidgetComponent = () => {
+  return <RelationshipStrength />;
+};
+
+const ActionItemsWrapper: WidgetComponent = () => {
+  return <ActionItems />;
+};
+
+const AIActionSuggestionsWrapper: WidgetComponent = () => {
+  return <AIActionSuggestions suggestions={[]} onActionSelect={() => {}} />;
+};
+
+const widgetComponents = {
+  'network-overview': NetworkOverviewWrapper,
+  'contact-card': ContactCardWrapper,
+  'relationship-strength': RelationshipStrengthWrapper,
+  'action-items': ActionItemsWrapper,
+  'ai-suggestions': AIActionSuggestionsWrapper,
+};
 
 export function useWidgets(userId: string): UseWidgetsReturn {
   const supabase = useSupabaseClient();
@@ -50,7 +95,10 @@ export function useWidgets(userId: string): UseWidgetsReturn {
       // Check cache first
       const cached = getCachedData();
       if (cached) {
-        setWidgets(cached);
+        setWidgets(cached.map((widget: Widget) => ({
+          ...widget,
+          component: widgetComponents[widget.id as keyof typeof widgetComponents] || (() => null),
+        })));
         setLoading(false);
         return;
       }
@@ -66,11 +114,11 @@ export function useWidgets(userId: string): UseWidgetsReturn {
       // Initialize with default preferences if none exist
       if (!data || data.length === 0) {
         const defaultPreferences = [
-          { id: 'network-overview', enabled: true, order: 0 },
-          { id: 'contact-card', enabled: true, order: 1 },
-          { id: 'relationship-strength', enabled: true, order: 2 },
-          { id: 'action-items', enabled: true, order: 3 },
-          { id: 'ai-suggestions', enabled: true, order: 4 },
+          { id: 'network-overview', enabled: true, order: 0, type: 'network-overview' as const, category: 'analytics' as const },
+          { id: 'contact-card', enabled: true, order: 1, type: 'contact-card' as const, category: 'contacts' as const },
+          { id: 'relationship-strength', enabled: true, order: 2, type: 'relationship-strength' as const, category: 'analytics' as const },
+          { id: 'action-items', enabled: true, order: 3, type: 'action-items' as const, category: 'tasks' as const },
+          { id: 'ai-suggestions', enabled: true, order: 4, type: 'ai-suggestions' as const, category: 'ai' as const },
         ];
 
         const { error: insertError } = await supabase
@@ -91,7 +139,7 @@ export function useWidgets(userId: string): UseWidgetsReturn {
             .split('-')
             .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' '),
-          component: () => null,
+          component: widgetComponents[pref.id as keyof typeof widgetComponents] || (() => null),
         }));
 
         setWidgets(formattedWidgets);
@@ -103,7 +151,7 @@ export function useWidgets(userId: string): UseWidgetsReturn {
             .split('-')
             .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' '),
-          component: () => null,
+          component: widgetComponents[pref.id as keyof typeof widgetComponents] || (() => null),
         }));
 
         setWidgets(formattedWidgets);

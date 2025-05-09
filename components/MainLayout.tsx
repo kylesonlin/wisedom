@@ -1,47 +1,166 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import SidePanel from '@/components/SidePanel';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { Box, CssBaseline, AppBar, Toolbar, Typography, List, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
+import {
+  Dashboard as DashboardIcon,
+  People as PeopleIcon,
+  Assignment as AssignmentIcon,
+  Settings as SettingsIcon,
+  Security as SecurityIcon,
+  History as HistoryIcon,
+  Home as HomeIcon,
+  Task as TaskIcon,
+  Folder as FolderIcon,
+} from '@mui/icons-material';
+import { SecurityNotifications } from '@/components/SecurityNotifications';
 import { getSupabaseClient } from '../utils/supabase';
 
 const supabase = getSupabaseClient();
 
-export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const [sideOpen, setSideOpen] = useState(false);
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  href: string;
+}
+
+const menuItems: MenuItem[] = [
+  {
+    text: 'Dashboard',
+    icon: <HomeIcon />,
+    href: '/'
+  },
+  {
+    text: 'Contacts',
+    icon: <PeopleIcon />,
+    href: '/contacts'
+  },
+  {
+    text: 'Tasks',
+    icon: <TaskIcon />,
+    href: '/tasks'
+  },
+  {
+    text: 'Projects',
+    icon: <FolderIcon />,
+    href: '/projects'
+  },
+  {
+    text: 'Security',
+    icon: <SecurityIcon />,
+    href: '/security'
+  },
+  {
+    text: 'Audit Logs',
+    icon: <HistoryIcon />,
+    href: '/audit'
+  },
+  {
+    text: 'Settings',
+    icon: <SettingsIcon />,
+    href: '/settings'
+  }
+];
+
+interface MainLayoutProps {
+  children: React.ReactNode;
+}
+
+const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.replace('/login');
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+      } else {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.push('/login');
+      }
     });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [router]);
 
+  const handleNavigation = (href: string) => {
+    router.push(href);
+  };
+
+  if (isLoading) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Top Bar */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white shadow">
-        <div className="flex items-center">
-          <button
-            className="mr-4 md:hidden"
-            onClick={() => setSideOpen(!sideOpen)}
-            aria-aria-aria-aria-label="Open navigation"
-          >
-            <svg className="h-6 w-6 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <span className="font-bold text-xl tracking-tight text-primary">RelationshipOS</span>
-        </div>
-        <div className="flex items-center space-x-4">
-          <div className="w-8 h-8 rounded-full bg-gray-200" />
-        </div>
-      </header>
-      {/* Side Panel */}
-      <SidePanel open={sideOpen} setOpen={setSideOpen} />
-      {/* Main Content */}
-      <main className="flex-1 p-4 md:ml-64 transition-all duration-200">
+    <Box sx={{ display: 'flex' }}>
+      <CssBaseline />
+      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            RelationshipOS
+          </Typography>
+          <SecurityNotifications />
+        </Toolbar>
+      </AppBar>
+      <Box
+        component="nav"
+        sx={{
+          width: 240,
+          flexShrink: 0,
+          borderRight: '1px solid rgba(0, 0, 0, 0.12)',
+          height: '100vh',
+          position: 'fixed',
+          overflowY: 'auto',
+          bgcolor: 'background.paper'
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            PRM Tool
+          </Typography>
+        </Box>
+        <List>
+          {menuItems.map((item) => (
+            <ListItemButton
+              key={item.text}
+              onClick={() => handleNavigation(item.href)}
+              selected={router.pathname === item.href}
+              sx={{
+                '&.Mui-selected': {
+                  backgroundColor: 'action.selected',
+                },
+              }}
+            >
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          ))}
+        </List>
+      </Box>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: 3,
+          ml: '240px',
+          minHeight: '100vh',
+          bgcolor: 'background.default'
+        }}
+      >
         {children}
-      </main>
-    </div>
+      </Box>
+    </Box>
   );
-} 
+};
+
+export default MainLayout; 

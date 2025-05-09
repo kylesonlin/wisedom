@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { RelationshipStrength } from './RelationshipStrength';
+import '@testing-library/jest-dom';
+import RelationshipStrength from './RelationshipStrength';
 
 describe('RelationshipStrength', () => {
   it('renders the component title correctly', () => {

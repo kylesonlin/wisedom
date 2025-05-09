@@ -216,16 +216,16 @@ export default function RelationshipStrength() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Input
+          <input
             type="text"
             placeholder="Search contacts..."
             value={searchQuery}
-            onValueChange={(value: string) => setSearchQuery(value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1"
           />
           <select
             value={sortBy}
-            onValueChange={(value: string) => setSortBy(value as typeof sortBy)}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
             className="rounded-md border border-gray-300 px-3 py-2"
           >
             <option value="strength">Sort by Strength</option>

@@ -10,6 +10,7 @@ import ContactCard from '@/components/ContactCard';
 import RelationshipStrength from '@/components/RelationshipStrength';
 import ActionItems from '@/components/ActionItems';
 import AIActionSuggestions from '@/components/AIActionSuggestions';
+import { PlusIcon, RefreshCwIcon, CogIcon, XIcon } from 'lucide-react';
 
 // Base widget props interface
 interface BaseWidgetProps {
@@ -139,9 +140,45 @@ interface DashboardLayoutProps {
   allowCustomization?: boolean;
 }
 
-// Cache key and duration
+// Move these outside the component to avoid recreation
 const WIDGET_CACHE_KEY = 'dashboard_widgets_cache';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Create a custom hook for cache management
+const useWidgetCache = () => {
+  const getCachedWidgets = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const cached = localStorage.getItem(WIDGET_CACHE_KEY);
+      if (!cached) return null;
+      
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp > CACHE_DURATION) {
+        localStorage.removeItem(WIDGET_CACHE_KEY);
+        return null;
+      }
+      
+      return data as Widget[];
+    } catch (error) {
+      console.error('Error reading from cache:', error);
+      return null;
+    }
+  }, []);
+
+  const setCachedWidgets = useCallback((data: Widget[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(WIDGET_CACHE_KEY, JSON.stringify({
+        data,
+        timestamp: Date.now(),
+      }));
+    } catch (error) {
+      console.error('Error writing to cache:', error);
+    }
+  }, []);
+
+  return { getCachedWidgets, setCachedWidgets };
+};
 
 // Error boundary component for widgets
 class WidgetErrorBoundary extends React.Component<
@@ -265,6 +302,7 @@ export default function DashboardLayout({
   const [availableWidgets, setAvailableWidgets] = useState<Widget[]>(defaultWidgets);
   const [showAddWidget, setShowAddWidget] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
+  const { getCachedWidgets, setCachedWidgets } = useWidgetCache();
 
   // Use widgets from props if provided, otherwise from state
   const widgets = useMemo(() => {
@@ -276,39 +314,7 @@ export default function DashboardLayout({
     return mergedWidgets as Widget[];
   }, [widgetsProp, widgetsState]);
 
-  // Cache management
-  const getCachedWidgets = useCallback(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const cached = localStorage.getItem(WIDGET_CACHE_KEY);
-      if (!cached) return null;
-      
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp > CACHE_DURATION) {
-        localStorage.removeItem(WIDGET_CACHE_KEY);
-        return null;
-      }
-      
-      return data as Widget[];
-    } catch (error) {
-      console.error('Error reading from cache:', error);
-      return null;
-    }
-  }, []);
-
-  const setCachedWidgets = useCallback((data: Widget[]) => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(WIDGET_CACHE_KEY, JSON.stringify({
-        data,
-        timestamp: Date.now(),
-      }));
-    } catch (error) {
-      console.error('Error writing to cache:', error);
-    }
-  }, []);
-
-  // Sync available widgets with enabled/disabled state
+  // Fix the cache management effect
   useEffect(() => {
     const cached = getCachedWidgets();
     if (cached) {
@@ -316,13 +322,13 @@ export default function DashboardLayout({
       return;
     }
 
-    setAvailableWidgets(prevWidgets => 
-      prevWidgets.map(widget => ({
-        ...widget,
-        enabled: widgets.some(w => w.id === widget.id && w.enabled)
-      }))
-    );
-    setCachedWidgets(widgets);
+    const updatedWidgets = defaultWidgets.map(widget => ({
+      ...widget,
+      enabled: widgets.some(w => w.id === widget.id && w.enabled)
+    }));
+    
+    setAvailableWidgets(updatedWidgets);
+    setCachedWidgets(updatedWidgets);
   }, [widgets, getCachedWidgets, setCachedWidgets]);
 
   const handleDragStart = (e: React.DragEvent, widgetId: string) => {
@@ -373,25 +379,24 @@ export default function DashboardLayout({
     document.body.style.cursor = 'default';
   };
 
+  // Fix the widget handlers
   const handleAddWidget = useCallback((widgetId: string) => {
     try {
-      const widget = availableWidgets.find((w) => w.id === widgetId);
+      const widget = defaultWidgets.find((w) => w.id === widgetId);
       if (widget) {
         toggleWidget(widgetId, true);
         setShowAddWidget(false);
       }
     } catch (error) {
       console.error('Error adding widget:', error);
-      // You might want to show a user-friendly error message here
     }
-  }, [availableWidgets, toggleWidget]);
+  }, [toggleWidget]);
 
   const handleRemoveWidget = useCallback((widgetId: string) => {
     try {
       toggleWidget(widgetId, false);
     } catch (error) {
       console.error('Error removing widget:', error);
-      // You might want to show a user-friendly error message here
     }
   }, [toggleWidget]);
 
@@ -430,30 +435,18 @@ export default function DashboardLayout({
   }
 
   return (
-    <div data-testid="dashboard-layout" className={`space-y-4 ${className}`}>
+    <div className="space-y-4" data-testid="dashboard-layout">
       <div className="flex justify-between items-center">
-        <h1 data-testid="dashboard-title" className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold" data-testid="dashboard-title">Dashboard</h1>
         <div className="flex space-x-2">
-          <Button
+          <button
             data-testid="add-widget-button"
-            variant="outline"
+            className="justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 flex items-center space-x-2"
             onClick={() => setShowAddWidget(!showAddWidget)}
-            className="flex items-center space-x-2"
           >
             <span>Add Widget</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </Button>
+            <PlusIcon className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
@@ -495,29 +488,16 @@ export default function DashboardLayout({
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-medium">{widget.title}</h3>
                 <div className="flex space-x-2">
-                  <Button
+                  <button
                     data-testid={`widget-refresh-${widget.id}`}
-                    variant="ghost"
-                    size="sm"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => {
                       // Force widget refresh by updating its key
                       setAvailableWidgets(prev => [...prev]);
                     }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </Button>
+                    <RefreshCwIcon className="h-5 w-5" />
+                  </button>
                   <Button
                     data-testid={`widget-settings-${widget.id}`}
                     variant="ghost"

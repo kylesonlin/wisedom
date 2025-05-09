@@ -1,0 +1,96 @@
+{
+  "timestamp": "2025-05-09T03:51:12.624Z",
+  "url": "http://localhost:3000",
+  "results": [
+    {
+      "header": "Content-Security-Policy",
+      "expected": "defaultSrc 'self'; scriptSrc 'self' 'unsafe-inline' 'unsafe-eval'; styleSrc 'self' 'unsafe-inline'; imgSrc 'self' data: https:; connectSrc 'self' https://api.example.com; fontSrc 'self' https://fonts.gstatic.com; objectSrc 'none'; mediaSrc 'self'; frameSrc 'none'; sandbox allow-forms allow-same-origin allow-scripts; reportUri /api/csp-report",
+      "actual": null,
+      "status": "fail",
+      "message": "Content Security Policy header is missing"
+    },
+    {
+      "header": "Strict-Transport-Security",
+      "expected": "max-age=31536000; includeSubDomains; preload",
+      "actual": null,
+      "status": "fail",
+      "message": "HSTS header is missing"
+    },
+    {
+      "header": "X-Frame-Options",
+      "expected": "DENY",
+      "actual": "DENY",
+      "status": "pass",
+      "message": "X-Frame-Options is properly configured"
+    },
+    {
+      "header": "X-Content-Type-Options",
+      "expected": "nosniff",
+      "actual": "nosniff",
+      "status": "pass",
+      "message": "X-Content-Type-Options is properly configured"
+    },
+    {
+      "header": "Referrer-Policy",
+      "expected": "strict-origin-when-cross-origin",
+      "actual": null,
+      "status": "fail",
+      "message": "Referrer-Policy header is missing"
+    },
+    {
+      "header": "Permissions-Policy",
+      "expected": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+      "actual": null,
+      "status": "fail",
+      "message": "Permissions-Policy header is missing"
+    },
+    {
+      "header": "Cross-Origin-Resource-Policy",
+      "expected": "same-site",
+      "actual": null,
+      "status": "fail",
+      "message": "Cross-Origin-Resource-Policy header is missing"
+    },
+    {
+      "header": "Cross-Origin-Opener-Policy",
+      "expected": "same-origin",
+      "actual": null,
+      "status": "fail",
+      "message": "Cross-Origin-Opener-Policy header is missing"
+    },
+    {
+      "header": "Cross-Origin-Embedder-Policy",
+      "expected": "require-corp",
+      "actual": null,
+      "status": "fail",
+      "message": "Cross-Origin-Embedder-Policy header is missing"
+    },
+    {
+      "header": "X-XSS-Protection",
+      "expected": "1; mode=block",
+      "actual": "1; mode=block",
+      "status": "pass",
+      "message": "X-XSS-Protection is properly configured"
+    },
+    {
+      "header": "X-DNS-Prefetch-Control",
+      "expected": "off",
+      "actual": null,
+      "status": "fail",
+      "message": "X-DNS-Prefetch-Control header is missing"
+    },
+    {
+      "header": "Expect-CT",
+      "expected": "max-age=30, enforce, report-uri=\"/api/ct-report\"",
+      "actual": null,
+      "status": "fail",
+      "message": "Expect-CT header is missing"
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "pass": 3,
+    "fail": 9,
+    "warning": 0
+  }
+}

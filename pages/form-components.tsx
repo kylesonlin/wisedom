@@ -4,8 +4,10 @@ import {
   Button,
   Input,
   Select,
+  SelectItem,
   Checkbox,
-  Radio,
+  RadioGroup,
+  RadioGroupItem,
   Textarea,
   FormDatePicker,
   FileUpload,
@@ -107,11 +109,17 @@ export default function FormComponentsExample() {
     }));
   };
 
-  const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const handleSelectChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      priority: value,
+    }));
+  };
+
+  const handleRadioChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      notificationType: value,
     }));
   };
 
@@ -182,11 +190,7 @@ export default function FormComponentsExample() {
   };
 
   return (
-    <Layout
-      navigationItems={navigationItems}
-      activePath="/form-components"
-      logo={<span className="text-xl font-bold">MyApp</span>}
-    >
+    <Layout>
       <div className="p-6">
         <h1 className="text-2xl font-bold">Form Components Example</h1>
         <p className="mt-2 text-muted-foreground">
@@ -197,97 +201,101 @@ export default function FormComponentsExample() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <Input
-                aria-aria-aria-label="First Name"
+                aria-label="First Name"
                 placeholder="Enter your first name"
                 value={formData.firstName}
-                onCheckedChange={(checked: boolean) => handleInputChange({ target: { checked } } as any)}
+                onChange={handleInputChange}
                 name="firstName"
-                data-data-error={errors.firstName}
+                data-error={errors.firstName}
               />
 
               <Input
-                aria-aria-aria-label="Last Name"
+                aria-label="Last Name"
                 placeholder="Enter your last name"
                 value={formData.lastName}
-                onCheckedChange={(checked: boolean) => handleInputChange({ target: { checked } } as any)}
+                onChange={handleInputChange}
                 name="lastName"
-                data-data-error={errors.lastName}
+                data-error={errors.lastName}
               />
 
               <Input
-                aria-aria-aria-label="Email"
+                aria-label="Email"
                 type="email"
                 placeholder="Enter your email"
                 value={formData.email}
-                onCheckedChange={(checked: boolean) => handleInputChange({ target: { checked } } as any)}
+                onChange={handleInputChange}
                 name="email"
-                data-data-error={errors.email}
+                data-error={errors.email}
               />
 
               <Input
-                aria-aria-aria-label="Password"
+                aria-label="Password"
                 type="password"
                 placeholder="Enter your password"
                 value={formData.password}
-                onCheckedChange={(checked: boolean) => handleInputChange({ target: { checked } } as any)}
+                onChange={handleInputChange}
                 name="password"
-                data-data-error={errors.password}
-                helperText="Password must be at least 8 characters long and contain uppercase, lowercase, and numbers"
+                data-error={errors.password}
               />
+              <p className="text-sm text-muted-foreground mt-1">
+                Password must be at least 8 characters long and contain uppercase, lowercase, and numbers
+              </p>
 
               <Input
-                aria-aria-aria-label="Confirm Password"
+                aria-label="Confirm Password"
                 type="password"
                 placeholder="Enter your password again"
                 value={formData.confirmPassword}
-                onCheckedChange={(checked: boolean) => handleInputChange({ target: { checked } } as any)}
+                onChange={handleInputChange}
                 name="confirmPassword"
-                data-data-error={errors.confirmPassword}
+                data-error={errors.confirmPassword}
               />
 
               <Select
-                aria-aria-aria-label="Priority"
+                aria-label="Priority"
                 value={formData.priority}
                 onValueChange={handleSelectChange}
-                name="priority"
-                options={priorityOptions}
-              />
+              >
+                {priorityOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </Select>
 
               <FormDatePicker
-                aria-aria-aria-label="Date"
+                aria-label="Date"
                 value={formData.date}
                 onChange={handleDateChange}
-                data-data-error={errors.date}
+                data-error={errors.date}
               />
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Notification Type</label>
-                <div className="space-y-2">
+                <RadioGroup
+                  value={formData.notificationType}
+                  onValueChange={handleRadioChange}
+                >
                   {notificationOptions.map((option) => (
-                    <Radio
-                      key={option.value}
-                      label={option.label}
-                      name="notificationType"
-                      value={option.value}
-                      checked={formData.notificationType === option.value}
-                      onCheckedChange={(checked: boolean) => handleInputChange({ target: { checked } } as any)}
-                    />
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <label htmlFor={option.value}>{option.label}</label>
+                    </div>
                   ))}
-                </div>
+                </RadioGroup>
               </div>
             </div>
 
             <Textarea
-              aria-aria-aria-label="Description"
+              aria-label="Description"
               placeholder="Enter a description"
               value={formData.description}
               onChange={handleTextareaChange}
               name="description"
-              data-data-error={errors.description}
+              data-error={errors.description}
             />
 
             <FileUpload
-              aria-aria-aria-label="Attachments"
+              aria-label="Attachments"
               accept=".pdf,.doc,.docx"
               multiple
               maxSize={5}
@@ -299,13 +307,18 @@ export default function FormComponentsExample() {
                 <label className="text-sm font-medium">Notifications</label>
                 <div className="space-y-2">
                   {notificationOptions.map((option) => (
-                    <Checkbox
-                      key={option.value}
-                      label={option.label}
-                      checked={formData.notifications.includes(option.value)}
-                      onCheckedChange={(checked: boolean) => handleNotificationChange({ target: { checked } } as any)}
-                      value={option.value}
-                    />
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`checkbox-${option.value}`}
+                        checked={formData.notifications.includes(option.value)}
+                        onCheckedChange={(checked) => {
+                          handleNotificationChange({
+                            target: { value: option.value, checked: checked as boolean }
+                          } as any);
+                        }}
+                      />
+                      <label htmlFor={`checkbox-${option.value}`}>{option.label}</label>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -329,7 +342,6 @@ export default function FormComponentsExample() {
           open={isModalOpen}
           onOpenChange={() => setIsModalOpen(false)}
           aria-label="Form Submitted"
-          variant="success"
         >
           <ModalContent>
             <p>Your form has been submitted successfully!</p>

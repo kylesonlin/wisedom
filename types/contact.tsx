@@ -52,18 +52,32 @@ export interface ContactSortOptions {
 
 export interface Contact {
   id: string;
+  firstName: string;
+  lastName: string;
   name: string;
   email: string;
   phone?: string;
   company?: string;
   role?: string;
+  title?: string;
   status: 'active' | 'inactive' | 'archived';
   category?: string;
   createdAt: Date;
   updatedAt: Date;
   lastContactedAt?: Date;
   nextFollowUpDate?: Date;
-  additionalFields?: Record<string, string | number | boolean | null>;
+  birthday?: Date;
+  notes?: string;
+  additionalFields?: Record<string, string | number | boolean | null | {
+    mergedAt: Date;
+    strategy: 'prefer_new' | 'prefer_existing' | 'combine' | 'custom';
+    customRules: {
+      field: keyof Contact;
+      strategy: 'prefer_new' | 'prefer_existing' | 'combine' | 'custom';
+      customFunction?: string;
+    }[];
+    originalValues: Record<string, any>;
+  }>;
   metadata?: ContactMetadata;
   settings?: ContactSettings;
   relationships?: {

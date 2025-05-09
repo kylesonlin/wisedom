@@ -1367,10 +1367,13 @@ function parseCSV(text: string, userId: string): Contact[] {
     const values = line.split(',').map(v => v.trim());
     const contact: Contact = {
       id: '',
-      userId: userId || '',
+      firstName: '',
+      lastName: '',
+      name: '',
       email: '',
       createdAt: new Date(),
       updatedAt: new Date(),
+      status: 'active',
     };
     
     headers.forEach((header, index) => {

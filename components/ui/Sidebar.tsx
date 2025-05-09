@@ -5,7 +5,7 @@ import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
 import { PanelLeft } from "lucide-react"
 
-import { useIsMobile } from "@/src/hooks/use-mobile"
+import { useMobile } from "../../hooks/useMobile"
 import { cn } from "@/lib/utils"
 import { Button } from "./Button"
 import { Input } from "./Input"
@@ -61,7 +61,7 @@ const SidebarProvider = ({
   const [state, setState] = React.useState<"expanded" | "collapsed">(defaultState)
   const [open, setOpen] = React.useState(defaultOpen)
   const [openMobile, setOpenMobile] = React.useState(defaultOpenMobile)
-  const isMobile = useIsMobile()
+  const isMobile = useMobile()
 
   const toggleSidebar = React.useCallback(() => {
     setState((prev) => (prev === "expanded" ? "collapsed" : "expanded"))

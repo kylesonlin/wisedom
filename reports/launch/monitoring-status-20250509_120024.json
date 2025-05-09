@@ -1,0 +1,5 @@
+{
+    "prometheus": {"up": true},
+    "grafana": {"up": true},
+    "alertmanager": {"up": true}
+}

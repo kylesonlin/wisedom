@@ -1,0 +1,4 @@
+name,email,phone,company,category,notes
+John Smith,john.smith@example.com,555-0101,Acme Corp,Client,Regular client
+Jane Doe,jane.doe@example.com,555-0102,XYZ Inc,Partner,Strategic partner
+Bob Wilson,bob.wilson@example.com,555-0103,ABC Ltd,Vendor,IT services provider 

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { Badge } from './Badge';
+import '@testing-library/jest-dom';
+import { Badge } from '../Badge';
 
 describe('Badge', () => {
   it('renders with default props', () => {

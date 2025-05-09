@@ -234,11 +234,11 @@ export default function NetworkOverview() {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Network Overview</h2>
         <div className="flex space-x-2">
-          <Input
+          <input
             type="text"
             placeholder="Search contacts..."
             value={searchTerm}
-            onValueChange={(value: string) => setSearchTerm(value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-64"
           />
         </div>

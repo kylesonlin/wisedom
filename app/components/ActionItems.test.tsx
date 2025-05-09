@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ActionItems } from './ActionItems';
+import '@testing-library/jest-dom';
+import ActionItems from './ActionItems';
 
 describe('ActionItems', () => {
   it('renders the component title correctly', () => {
@@ -60,7 +61,7 @@ describe('ActionItems', () => {
   it('applies hover effect to action items', () => {
     render(<ActionItems />);
     
-    const actionItems = screen.getAllByRole('listitem');
+    const actionItems = screen.getAllByText(/Follow up|Schedule|Review/).map(item => item.closest('div'));
     actionItems.forEach(item => {
       expect(item).toHaveClass('hover:bg-gray-50');
     });

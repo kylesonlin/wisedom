@@ -15,12 +15,15 @@ const mockProject: Project = {
   startDate: new Date('2024-01-01'),
   endDate: new Date('2024-12-31'),
   status: 'inuprogress',
+  priority: 'medium',
+  ownerId: 'user1',
+  contacts: [],
   tasks: [
     {
       id: '1',
       title: 'Task 1',
       description: 'Test task 1',
-      status: 'todo',
+      status: 'inuprogress',
       priority: 'high',
       dueDate: new Date('2024-03-01'),
       assigneeId: 'user1',
@@ -48,13 +51,14 @@ const mockProject: Project = {
       id: '1',
       title: 'Milestone 1',
       description: 'Test milestone 1',
-      dueDate: new Date('2024-06-30'),
-      status: 'upcoming'
+      dueDate: new Date('2024-04-01'),
+      status: 'upcoming',
+      tasks: []
     }
   ],
   teamMembers: [
-    { id: 'user1', name: 'User 1', role: 'developer' },
-    { id: 'user2', name: 'User 2', role: 'designer' }
+    { userId: 'user1', role: 'member', joinedAt: new Date('2024-01-01') },
+    { userId: 'user2', role: 'member', joinedAt: new Date('2024-01-01') }
   ],
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01')
@@ -65,21 +69,60 @@ const mockContacts: Contact[] = [
     id: '1',
     firstName: 'John',
     lastName: 'Doe',
+    name: 'John Doe',
     email: 'john@example.com',
-    company: 'Test Corp',
+    company: 'Example Corp',
     phone: '123-456-7890',
-    notes: 'Test contact'
+    notes: 'Test contact',
+    status: 'active',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01')
+  },
+  {
+    id: '2',
+    firstName: 'Jane',
+    lastName: 'Smith',
+    name: 'Jane Smith',
+    email: 'jane@example.com',
+    company: 'Example Inc',
+    phone: '987-654-3210',
+    notes: 'Test contact 2',
+    status: 'active',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01')
   }
 ];
 
 const mockInteractions: Interaction[] = [
   {
     id: '1',
-    contactId: '1',
     type: 'meeting',
-    timestamp: new Date('2024-01-15'),
-    notes: 'Test meeting',
+    contactId: '1',
+    userId: 'user1',
+    timestamp: new Date('2024-01-15').toISOString(),
+    content: 'Test meeting',
+    summary: 'Test meeting summary',
     sentiment: 0.8,
+    priority: 'high',
+    status: 'completed',
+    followUpNeeded: false,
+    notes: 'Test meeting',
+    topics: []
+  },
+  {
+    id: '2',
+    type: 'email',
+    contactId: '2',
+    userId: 'user1',
+    timestamp: new Date('2024-01-20').toISOString(),
+    content: 'Test email',
+    summary: 'Test email summary',
+    sentiment: 0.5,
+    priority: 'medium',
+    status: 'completed',
+    followUpNeeded: true,
+    followUpDate: new Date('2024-02-01').toISOString(),
+    notes: 'Test email',
     topics: []
   }
 ];
@@ -100,7 +143,7 @@ export default function ProjectAnalyticsTest() {
         ...task,
         status: task.status === 'todo' ? 'inuprogress' : 'todo'
       }))
-    };
+    } as Project;
     setMockData(prev => ({ ...prev, project: updatedProject }));
   };
 
