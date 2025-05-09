@@ -13,10 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/Dialog/index"
-import { Label } from "@/components/ui/Label/index"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup/index"
-import { Textarea } from "@/components/ui/Textarea/index"
+} from "@/components/ui/Dialog"
+import { Label } from "@/components/ui/Label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup"
+import { Textarea } from "@/components/ui/Textarea"
 import { useToast } from "@/components/ui/useToast"
 
 interface FeedbackDialogProps {
