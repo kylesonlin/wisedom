@@ -539,7 +539,7 @@ export function GmailIntegration() {
                       <div>
                         <h4 className="text-sm font-medium mb-2">Attendees</h4>
                         <div className="space-y-1">
-                          {selectedEvent.attendees.map((attendee, index) => (
+                          {selectedEvent.attendees.map((attendee: { email: string }, index) => (
                             <div key={index} className="text-sm text-gray-600">
                               {attendee.email}
                             </div>

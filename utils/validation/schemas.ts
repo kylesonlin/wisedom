@@ -559,7 +559,11 @@ export const gmailCalendarEventSchema = z.object({
   end_time: z.string().datetime(),
   is_all_day: z.boolean(),
   status: z.enum(['confirmed', 'tentative', 'cancelled']),
-  attendees: z.array(z.record(z.unknown())),
+  attendees: z.array(z.object({
+    email: z.string().email(),
+    displayName: z.string().optional(),
+    responseStatus: z.enum(['accepted', 'declined', 'tentative', 'needsAction']).optional()
+  })),
   recurrence: z.record(z.unknown()).optional(),
   metadata: z.record(z.unknown()).optional(),
   created_at: z.string().datetime(),
