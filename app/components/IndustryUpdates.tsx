@@ -6,7 +6,7 @@ import { Bookmark, ExternalLink, Share2, ThumbsUp } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs"
 import { Badge } from "@/components/ui/Badge"
-import { Separator } from "@/components/ui/Separator/index"
+import { Separator } from "@/components/ui/Separator"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
 
 const newsItems = [

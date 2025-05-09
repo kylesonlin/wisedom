@@ -7,8 +7,8 @@ import { useSession, signOut } from "next-auth/react"
 import Image from "next/image"
 import Link from "next/link"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar/index"
-import { Button } from "@/components/ui/Button/index"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar"
+import { Button } from "@/components/ui/Button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,8 +17,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuGroup,
-} from "@/components/ui/DropdownMenu/index"
-import { Input } from "@/components/ui/Input/index"
+} from "@/components/ui/DropdownMenu"
+import { Input } from "@/components/ui/Input"
 
 import { useSidebar } from "./DashboardSidebar"
 

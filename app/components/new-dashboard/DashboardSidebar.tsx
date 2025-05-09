@@ -19,9 +19,9 @@ import {
   Users,
 } from "lucide-react"
 
-import { Button } from "@/components/ui/Button/index"
-import { ScrollArea } from "@/components/ui/ScrollArea/index"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/Tooltip/index"
+import { Button } from "@/components/ui/Button"
+import { ScrollArea } from "@/components/ui/ScrollArea"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/Tooltip"
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -30,7 +30,9 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
-} from "@/components/ui/NavigationMenu/index"
+  NavigationMenuIndicator,
+  NavigationMenuViewport,
+} from "@/components/ui/NavigationMenu"
 
 interface SidebarContextType {
   expanded: boolean

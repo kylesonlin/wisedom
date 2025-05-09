@@ -4,12 +4,12 @@ import * as React from "react"
 import { Check, Plus, Search, Mail, Phone, Star } from "lucide-react"
 import { createClient } from "@supabase/supabase-js"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar/index"
-import { Button } from "@/components/ui/Button/index"
-import { Card, CardContent } from "@/components/ui/Card/index"
-import { Input } from "@/components/ui/Input/index"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/Popover/index"
-import { ScrollArea } from "@/components/ui/ScrollArea/index"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar"
+import { Button } from "@/components/ui/Button"
+import { Card, CardContent } from "@/components/ui/Card"
+import { Input } from "@/components/ui/Input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/Popover"
+import { ScrollArea } from "@/components/ui/ScrollArea"
 import { cn } from "@/lib/utils"
 
 // Supabase client setup

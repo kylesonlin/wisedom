@@ -4,9 +4,9 @@ import * as React from "react"
 import { useState } from "react"
 import { BarChart, LineChart, PieChart } from "lucide-react"
 
-import { Button } from "@/components/ui/Button/index"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card/index"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs/index"
+import { Button } from "@/components/ui/Button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs"
 
 export function NetworkOverview() {
   const [timeframe, setTimeframe] = useState("month")
