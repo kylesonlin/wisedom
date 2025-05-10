@@ -8,6 +8,7 @@ import ContactCard from '@/components/ContactCard';
 import RelationshipStrength from '@/components/RelationshipStrength';
 import ActionItems from '@/components/ActionItems';
 import AIActionSuggestions from '@/components/AIActionSuggestions';
+import { getLocalStorage, setLocalStorage, removeLocalStorage } from '@/utils/storage';
 
 const CACHE_KEY = 'widgets-cache';
 const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes

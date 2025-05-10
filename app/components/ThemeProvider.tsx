@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { getLocalStorage, setLocalStorage } from '@/utils/storage';
 
 type Theme = 'dark' | 'light' | 'system';
 
@@ -33,11 +34,9 @@ export function ThemeProvider({
 
   useEffect(() => {
     setMounted(true);
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem(storageKey) as Theme;
-      if (savedTheme) {
-        setTheme(savedTheme);
-      }
+    const savedTheme = typeof window !== 'undefined' ? getLocalStorage(storageKey) as Theme : null;
+    if (savedTheme) {
+      setTheme(savedTheme);
     }
   }, [storageKey]);
 
@@ -63,7 +62,7 @@ export function ThemeProvider({
     theme,
     setTheme: (theme: Theme) => {
       if (typeof window !== 'undefined') {
-        localStorage.setItem(storageKey, theme);
+        setLocalStorage(storageKey, theme);
       }
       setTheme(theme);
     },

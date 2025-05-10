@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Contact, Activity } from '../types/contact';
+import { getLocalStorage, setLocalStorage, removeLocalStorage } from '@/utils/storage';
 
 interface UseContactsReturn {
   contacts: Contact[];

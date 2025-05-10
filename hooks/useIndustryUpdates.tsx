@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { IndustryUpdate } from '@/types/industry';
+import { getLocalStorage, setLocalStorage, removeLocalStorage } from '@/utils/storage';
 
 const CACHE_KEY = 'industry-updates-cache';
 const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
@@ -43,12 +44,12 @@ export function useIndustryUpdates(userId: string): UseIndustryUpdatesReturn {
 
   const getCachedData = useCallback(() => {
     if (typeof window === 'undefined') return null;
-    const cached = localStorage.getItem(CACHE_KEY);
+    const cached = getLocalStorage(CACHE_KEY);
     if (!cached) return null;
     
     const { data, timestamp } = JSON.parse(cached);
     if (Date.now() - timestamp > CACHE_DURATION) {
-      localStorage.removeItem(CACHE_KEY);
+      removeLocalStorage(CACHE_KEY);
       return null;
     }
     
@@ -57,7 +58,7 @@ export function useIndustryUpdates(userId: string): UseIndustryUpdatesReturn {
 
   const setCachedData = useCallback((data: any) => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
+    setLocalStorage(CACHE_KEY, JSON.stringify({
       data,
       timestamp: Date.now(),
     }));

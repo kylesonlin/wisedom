@@ -13,6 +13,7 @@ import RelationshipStrength from '@/components/RelationshipStrength';
 import ActionItems from '@/components/ActionItems';
 import AIActionSuggestions from '@/components/AIActionSuggestions';
 import { PlusIcon, RefreshCwIcon, CogIcon, XIcon } from 'lucide-react';
+import { getLocalStorage, setLocalStorage, removeLocalStorage } from '@/utils/storage';
 
 // Base widget props interface
 interface BaseWidgetProps {
@@ -151,12 +152,12 @@ const useWidgetCache = () => {
   const getCachedWidgets = useCallback(() => {
     if (typeof window === 'undefined') return null;
     try {
-      const cached = localStorage.getItem(WIDGET_CACHE_KEY);
+      const cached = getLocalStorage(WIDGET_CACHE_KEY);
       if (!cached) return null;
       
       const { data, timestamp } = JSON.parse(cached);
       if (Date.now() - timestamp > CACHE_DURATION) {
-        localStorage.removeItem(WIDGET_CACHE_KEY);
+        removeLocalStorage(WIDGET_CACHE_KEY);
         return null;
       }
       
@@ -170,7 +171,7 @@ const useWidgetCache = () => {
   const setCachedWidgets = useCallback((data: Widget[]) => {
     if (typeof window === 'undefined') return;
     try {
-      localStorage.setItem(WIDGET_CACHE_KEY, JSON.stringify({
+      setLocalStorage(WIDGET_CACHE_KEY, JSON.stringify({
         data,
         timestamp: Date.now(),
       }));
