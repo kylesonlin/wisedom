@@ -1,19 +1,27 @@
 'use client';
 import { signIn } from 'next-auth/react';
-import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function SignIn() {
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/dashboard');
+    }
+  }, [status, router]);
 
   const handleSignIn = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const result = await signIn('google', {
-        callbackUrl: '/',
+        callbackUrl: '/dashboard',
         redirect: false,
       });
 
