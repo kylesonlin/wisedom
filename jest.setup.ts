@@ -5,60 +5,7 @@ import { afterEach } from 'vitest';
 import { expect } from '@jest/globals';
 import React from 'react';
 
-// Mock next/router
-jest.mock('next/router', () => ({
-  useRouter() {
-    return {
-      route: '/',
-      pathname: '',
-      query: {},
-      asPath: '',
-      push: jest.fn(),
-      replace: jest.fn(),
-    };
-  },
-}));
-
-// Mock next/navigation
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    replace: jest.fn(),
-    back: jest.fn(),
-    forward: jest.fn(),
-    refresh: jest.fn(),
-    prefetch: jest.fn(),
-  }),
-  usePathname: () => '/',
-  useSearchParams: () => new URLSearchParams(),
-}));
-
-// Mock next/image
-jest.mock('next/image', () => ({
-  __esModule: true,
-  default: function Image(props: any) {
-    // eslint-disable-next-line jsx-a11y/alt-text
-    return React.createElement('img', props);
-  },
-}));
-
-// Mock Supabase client
-jest.mock('@/utils/supabase', () => ({
-  supabase: {
-    auth: {
-      getSession: jest.fn(),
-      onAuthStateChange: jest.fn(),
-    },
-    from: jest.fn(),
-  },
-}));
-
-// Mock toast notifications
-jest.mock('@/utils/toast', () => ({
-  toast: jest.fn(),
-}));
-
-// Add TextEncoder/TextDecoder for tests
+// Add global TextEncoder/TextDecoder
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder as any;
 
@@ -103,10 +50,76 @@ const localStorageMock = {
   setItem: jest.fn(),
   removeItem: jest.fn(),
   clear: jest.fn(),
-  length: 0,
-  key: jest.fn(),
 };
 global.localStorage = localStorageMock;
+
+// Mock next/router
+jest.mock('next/router', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+    pathname: '/',
+    query: {},
+  }),
+}));
+
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+    pathname: '/',
+    query: {},
+  }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+// Mock next/image
+jest.mock('next/image', () => ({
+  __esModule: true,
+  default: (props: any) => {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img {...props} />;
+  },
+}));
+
+// Mock Supabase client
+jest.mock('@/lib/supabase', () => ({
+  supabase: {
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      then: jest.fn().mockResolvedValue({ data: null, error: null }),
+    })),
+    auth: {
+      signIn: jest.fn(),
+      signOut: jest.fn(),
+      onAuthStateChange: jest.fn(),
+    },
+  },
+}));
+
+// Mock toast notifications
+jest.mock('react-hot-toast', () => ({
+  __esModule: true,
+  default: {
+    success: jest.fn(),
+    error: jest.fn(),
+    loading: jest.fn(),
+    dismiss: jest.fn(),
+  },
+}));
 
 // Mock window.innerWidth
 Object.defineProperty(window, 'innerWidth', {
