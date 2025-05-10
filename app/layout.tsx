@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { SessionProvider } from 'next-auth/react'
-import Providers from '@/app/Providers'
+import Providers from '@/components/Providers'
 
 export const metadata: Metadata = {
   title: 'Contact Management System',
