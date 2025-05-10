@@ -1415,6 +1415,11 @@ function parseCSV(text: string, userId: string): Contact[] {
       createdAt: new Date(),
       updatedAt: new Date(),
       status: 'active',
+      relationships: [{
+        userId,
+        type: 'primary',
+        permissions: ['view', 'edit', 'delete']
+      }]
     };
     
     headers.forEach((header, index) => {
@@ -1426,11 +1431,13 @@ function parseCSV(text: string, userId: string): Contact[] {
         case 'firstname':
         case 'first_name':
           contact.firstName = value;
+          contact.name = `${value} ${contact.lastName || ''}`.trim();
           break;
         case 'last name':
         case 'lastname':
         case 'last_name':
           contact.lastName = value;
+          contact.name = `${contact.firstName || ''} ${value}`.trim();
           break;
         case 'email':
           contact.email = value;
@@ -1463,7 +1470,23 @@ function parseCSV(text: string, userId: string): Contact[] {
 function parseJSON(text: string): Contact[] {
   try {
     const data = JSON.parse(text);
-    return Array.isArray(data) ? data : [data];
+    const contacts = Array.isArray(data) ? data : [data];
+    return contacts.map(contact => ({
+      ...contact,
+      id: contact.id || '',
+      firstName: contact.firstName || '',
+      lastName: contact.lastName || '',
+      name: contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),
+      email: contact.email || '',
+      createdAt: contact.createdAt || new Date(),
+      updatedAt: contact.updatedAt || new Date(),
+      status: contact.status || 'active',
+      relationships: contact.relationships || [{
+        userId: 'current-user', // This should be replaced with actual user ID
+        type: 'primary',
+        permissions: ['view', 'edit', 'delete']
+      }]
+    }));
   } catch (error) {
     throw new ImportError('PARSE_ERROR', 'Invalid JSON format', {
       file: 'unknown',
