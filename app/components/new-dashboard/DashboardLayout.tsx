@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
+import { useState, useEffect, Suspense, useCallback, useMemo, Component } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useWidgets } from '@/hooks/useWidgets';
@@ -182,7 +182,7 @@ const useWidgetCache = () => {
 };
 
 // Error boundary component for widgets
-class WidgetErrorBoundary extends React.Component<
+class WidgetErrorBoundary extends Component<
   { children: React.ReactNode; widgetId: string; onError?: (error: Error) => void },
   { hasError: boolean; error: Error | null }
 > {
