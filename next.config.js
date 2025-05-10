@@ -70,6 +70,11 @@ const nextConfig = {
     
     return config;
   },
+  // ESLint configuration
+  eslint: {
+    ignoreDuringBuilds: false,
+    dirs: ['pages', 'components', 'lib', 'utils', 'types', 'services', 'tests'],
+  },
 };
 
 module.exports = nextConfig; 

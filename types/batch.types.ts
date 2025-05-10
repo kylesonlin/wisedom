@@ -1,10 +1,12 @@
-import { NormalizedContact, ContactImportResult, ContactImportOptions } from './contact.types';
+import { NormalizedContact, ContactImportResult, ContactImportOptions } from './contact';
 
 export interface BatchProcessingConfig {
   maxBatchSize: number;
-  maxRetries: number;
-  retryDelay: number;
-  timeout: number;
+  similarityThreshold: number;
+  onProgress?: (progress: number) => void;
+  onBatchProcessed?: (batch: NormalizedContact[]) => void;
+  onNormalizationComplete?: (stats: ContactImportResult) => void;
+  onError?: (error: Error) => void;
 }
 
 export interface BatchProcessingStats {
@@ -25,7 +27,7 @@ export interface BatchProcessingState {
   errors: Error[];
 }
 
-export interface BatchProcessor<T = NormalizedContact> {
+export interface BatchProcessor<T> {
   processBatch(batch: T[], options: ContactImportOptions): Promise<ContactImportResult>;
   pause(): void;
   resume(): void;
