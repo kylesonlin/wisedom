@@ -6,16 +6,18 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function SignIn() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession({
+    required: false,
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && session) {
       router.replace('/dashboard');
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
   const handleSignIn = async () => {
     try {

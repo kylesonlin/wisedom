@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { ThemeProvider } from '../components/ThemeProvider'
+import { ThemeProvider } from '@/components/ThemeProvider'
+import { SessionProvider } from 'next-auth/react'
+import Providers from './Providers'
 
 export const metadata: Metadata = {
   title: 'Contact Management System',
@@ -16,14 +18,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <Providers>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
   )
