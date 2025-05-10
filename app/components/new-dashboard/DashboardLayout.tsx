@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
+import * as React from 'react';
+import { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useWidgets } from '@/hooks/useWidgets';
@@ -202,15 +203,10 @@ class WidgetErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <Card className="p-4">
-          <div className="text-red-500 mb-2">Widget Error: {this.state.error?.message}</div>
-          <Button
-            variant="outline"
-            onClick={() => this.setState({ hasError: false, error: null })}
-          >
-            Retry Widget
-          </Button>
-        </Card>
+        <div className="p-4 border border-red-500 rounded-lg bg-red-50">
+          <h3 className="text-red-700 font-semibold">Widget Error</h3>
+          <p className="text-red-600">{this.state.error?.message}</p>
+        </div>
       );
     }
 
