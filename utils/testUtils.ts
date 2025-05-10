@@ -49,15 +49,21 @@ export const generateMockProject = (overrides = {}): Project => ({
 
 export const generateMockContact = (overrides = {}): Contact => ({
   id: '1',
-  userId: 'user1',
   firstName: 'John',
   lastName: 'Doe',
+  name: 'John Doe',
   email: 'john@example.com',
   company: 'Test Corp',
   phone: '123-456-7890',
   notes: 'Test contact',
+  status: 'active',
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
+  relationships: [{
+    userId: 'user1',
+    type: 'primary',
+    permissions: ['view', 'edit', 'delete']
+  }],
   ...overrides
 });
 
