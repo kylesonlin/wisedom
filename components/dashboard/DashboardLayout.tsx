@@ -7,12 +7,12 @@ import { cn } from '@/utils/cn';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
-interface DashboardLayoutProps {
+interface DashboardGridLayoutProps {
   className?: string;
   children?: React.ReactNode;
 }
 
-export function DashboardLayout({ className, children }: DashboardLayoutProps) {
+export function DashboardGridLayout({ className, children }: DashboardGridLayoutProps) {
   const { widgets, layout, updateLayout, removeWidget } = useDashboardStore();
 
   return (
