@@ -1,4 +1,4 @@
-import { NormalizedContact } from './contact.types';
+import { NormalizedContact } from './contact';
 
 export interface NormalizationRule {
   field: keyof NormalizedContact;
