@@ -3,20 +3,32 @@
 import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
-import ReactFlow, {
-  Node,
-  Edge,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  Position,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+import dynamic from 'next/dynamic';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useTheme } from '@/contexts/ThemeContext';
+
+// Dynamically import ReactFlow with no SSR
+const ReactFlow = dynamic(
+  () => import('reactflow').then((mod) => mod.default),
+  { ssr: false }
+);
+
+// Dynamically import ReactFlow components
+const Controls = dynamic(
+  () => import('reactflow').then((mod) => mod.Controls),
+  { ssr: false }
+);
+
+const Background = dynamic(
+  () => import('reactflow').then((mod) => mod.Background),
+  { ssr: false }
+);
+
+// Import types and values from reactflow
+import type { Node, Edge } from 'reactflow';
+import { Position } from 'reactflow';
 
 interface Contact {
   id: string;
@@ -76,8 +88,8 @@ export default function NetworkOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -245,17 +257,17 @@ export default function NetworkOverview() {
       </div>
 
       <div className="h-[600px] border rounded-lg">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          fitView
-        >
-          <Background />
-          <Controls />
-        </ReactFlow>
+        {typeof window !== 'undefined' && (
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            fitView
+          >
+            <Controls />
+            <Background />
+          </ReactFlow>
+        )}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4">
