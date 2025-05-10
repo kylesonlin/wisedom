@@ -1,5 +1,4 @@
 import React from 'react';
-import { DashboardGridLayout } from '@/components/dashboard/DashboardLayout';
 import { Sidebar } from '@/components/ui/Sidebar';
 
 interface DashboardRootLayoutProps {
@@ -14,7 +13,7 @@ export default function DashboardRootLayout({
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <div className="container mx-auto p-6">
-          <DashboardGridLayout>{children}</DashboardGridLayout>
+          {children}
         </div>
       </main>
     </div>
