@@ -13,7 +13,6 @@ const createTestQueryClient = () =>
     defaultOptions: {
       queries: {
         retry: false,
-        cacheTime: 0,
         refetchOnWindowFocus: false,
       },
     },
@@ -69,26 +68,6 @@ export const mockEvent = {
   is_all_day: false,
   status: 'confirmed',
 };
-
-// Custom matchers
-expect.extend({
-  toBeWithinRange(received: number, floor: number, ceiling: number) {
-    const pass = received >= floor && received <= ceiling;
-    if (pass) {
-      return {
-        message: () =>
-          `expected ${received} not to be within range ${floor} - ${ceiling}`,
-        pass: true,
-      };
-    } else {
-      return {
-        message: () =>
-          `expected ${received} to be within range ${floor} - ${ceiling}`,
-        pass: false,
-      };
-    }
-  },
-});
 
 // Helper functions
 export const waitForLoadingToFinish = async () => {
