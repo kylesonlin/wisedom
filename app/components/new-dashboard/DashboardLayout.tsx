@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useEffect, Suspense, useCallback, useMemo, Component } from 'react';
+import { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useWidgets } from '@/hooks/useWidgets';
@@ -181,38 +182,20 @@ const useWidgetCache = () => {
   return { getCachedWidgets, setCachedWidgets };
 };
 
-// Error boundary component for widgets
-class WidgetErrorBoundary extends Component<
-  { children: React.ReactNode; widgetId: string; onError?: (error: Error) => void },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: { children: React.ReactNode; widgetId: string; onError?: (error: Error) => void }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error(`Widget ${this.props.widgetId} error:`, error, errorInfo);
-    this.props.onError?.(error);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="p-4 border border-red-500 rounded-lg bg-red-50">
-          <h3 className="text-red-700 font-semibold">Widget Error</h3>
-          <p className="text-red-600">{this.state.error?.message}</p>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
+// Error boundary fallback component
+const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
+  <div className="p-4 border border-red-500 rounded-lg bg-red-50">
+    <h3 className="text-red-700 font-semibold">Widget Error</h3>
+    <p className="text-red-600">{error.message}</p>
+    <Button
+      variant="outline"
+      onClick={resetErrorBoundary}
+      className="mt-2"
+    >
+      Try again
+    </Button>
+  </div>
+);
 
 // Loading component for widgets
 const WidgetLoading = () => (
@@ -537,8 +520,8 @@ export default function DashboardLayout({
                 </div>
               </div>
               <Suspense fallback={<WidgetLoading />}>
-                <WidgetErrorBoundary 
-                  widgetId={widget.id}
+                <ErrorBoundary
+                  FallbackComponent={ErrorFallback}
                   onError={(error) => {
                     console.error(`Widget ${widget.id} failed:`, error);
                     // You might want to report this error to your error tracking service
@@ -548,7 +531,7 @@ export default function DashboardLayout({
                     id={widget.id} 
                     settings={widget.settings} 
                   />
-                </WidgetErrorBoundary>
+                </ErrorBoundary>
               </Suspense>
             </Card>
           </div>
