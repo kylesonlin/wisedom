@@ -16,6 +16,7 @@ export interface Contact {
   nextFollowUpDate?: Date;
   birthday?: Date;
   notes?: string;
+  assignedTo?: string;
   additionalFields?: Record<string, string | number | boolean | null | {
     mergedAt: Date;
     strategy: 'prefer_new' | 'prefer_existing' | 'combine' | 'custom';
