@@ -18,7 +18,9 @@ class WebSocketService {
   private reconnectTimeout = 1000;
 
   private constructor() {
-    this.connect();
+    if (typeof window !== 'undefined') {
+      this.connect();
+    }
   }
 
   public static getInstance(): WebSocketService {
@@ -29,6 +31,8 @@ class WebSocketService {
   }
 
   private connect() {
+    if (typeof window === 'undefined') return;
+
     const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:3001';
     this.ws = new WebSocket(wsUrl);
 
@@ -57,6 +61,7 @@ class WebSocketService {
   }
 
   private reconnect() {
+    if (typeof window === 'undefined') return;
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       setTimeout(() => {
@@ -76,6 +81,7 @@ class WebSocketService {
   }
 
   public send(event: WebSocketEvent) {
+    if (typeof window === 'undefined') return;
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(event));
     } else {

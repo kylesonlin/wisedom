@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { Project, Task, Milestone } from '../types/project';
 import { Contact } from '../types/contact';
@@ -8,17 +10,20 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { Pie, Bar, Line } from 'react-chartjs-2';
 import 'chartjs-adapter-date-fns';
 
-ChartJS.register(
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  TimeScale
-);
+// Only register Chart.js components on the client side
+if (typeof window !== 'undefined') {
+  ChartJS.register(
+    ArcElement,
+    Tooltip,
+    Legend,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    PointElement,
+    LineElement,
+    TimeScale
+  );
+}
 
 interface ProjectAnalyticsProps {
   project: Project;
@@ -33,6 +38,8 @@ export default function ProjectAnalyticsComponent({ project, contacts, interacti
   const [selectedTimeframe, setSelectedTimeframe] = useState<'day' | 'week' | 'month'>('week');
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     async function loadAnalytics() {
       try {
         const analyticsData = await calculateProjectAnalytics(project, contacts, interactions);
@@ -65,6 +72,10 @@ export default function ProjectAnalyticsComponent({ project, contacts, interacti
       unsubscribe();
     };
   }, [project, contacts, interactions]);
+
+  if (typeof window === 'undefined') {
+    return null;
+  }
 
   if (loading) return <div className="p-4">Loading analytics...</div>;
   if (!analytics) return <div className="p-4 text-red-500">Error loading analytics</div>;
