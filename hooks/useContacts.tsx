@@ -40,13 +40,12 @@ export function useContacts(userId: string): UseContactsReturn {
   const [hasMore, setHasMore] = useState(true);
 
   const getCachedData = useCallback(() => {
-    if (typeof window === 'undefined') return null;
-    const cached = localStorage.getItem(CACHE_KEY);
+    const cached = getLocalStorage(CACHE_KEY);
     if (!cached) return null;
     
     const { data, timestamp } = JSON.parse(cached);
     if (Date.now() - timestamp > CACHE_DURATION) {
-      localStorage.removeItem(CACHE_KEY);
+      removeLocalStorage(CACHE_KEY);
       return null;
     }
     
@@ -54,8 +53,7 @@ export function useContacts(userId: string): UseContactsReturn {
   }, []);
 
   const setCachedData = useCallback((data: any) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
+    setLocalStorage(CACHE_KEY, JSON.stringify({
       data,
       timestamp: Date.now(),
     }));

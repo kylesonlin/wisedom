@@ -94,14 +94,16 @@ export function useWidgets(userId: string): UseWidgetsReturn {
       setLoading(true);
 
       // Check cache first
-      const cached = getCachedData();
+      const cached = getLocalStorage(CACHE_KEY);
       if (cached) {
-        setWidgets(cached.map((widget: Widget) => ({
-          ...widget,
-          component: widgetComponents[widget.id as keyof typeof widgetComponents] || (() => null),
-        })));
-        setLoading(false);
-        return;
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          setWidgets(data);
+          setLoading(false);
+          return;
+        }
+        // Cache expired
+        removeLocalStorage(CACHE_KEY);
       }
 
       const { data, error } = await supabase
@@ -158,10 +160,18 @@ export function useWidgets(userId: string): UseWidgetsReturn {
         setWidgets(formattedWidgets);
         setCachedData(formattedWidgets);
       }
+
+      // Cache the result
+      setLocalStorage(CACHE_KEY, JSON.stringify({
+        data: widgets,
+        timestamp: Date.now()
+      }));
+
+      setWidgets(widgets);
+      setLoading(false);
     } catch (err) {
       console.error('Error loading widget preferences:', err);
       setError(err instanceof Error ? err.message : 'Failed to load widget preferences');
-    } finally {
       setLoading(false);
     }
   }, [userId, supabase, getCachedData, setCachedData]);
