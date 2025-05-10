@@ -16,12 +16,14 @@ function SignInButton({ callbackUrl }: { callbackUrl: string }) {
       setError(null);
       const result = await signIn('google', {
         callbackUrl,
-        redirect: true,
+        redirect: false,
       });
 
       if (result?.error) {
         setError('Failed to sign in with Google');
         console.error('Sign in error:', result.error);
+      } else if (result?.url) {
+        router.push(result.url);
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -63,6 +65,28 @@ function SignInContent() {
     }
   }, [status, session, router, callbackUrl]);
 
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'authenticated') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -82,7 +106,14 @@ function SignInContent() {
 
 export default function SignInPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
       <SignInContent />
     </Suspense>
   );
