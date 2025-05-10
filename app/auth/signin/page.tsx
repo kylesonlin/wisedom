@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { signIn } from 'next-auth/react';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function SignIn() {
   const { data: session, status } = useSession({
@@ -12,27 +12,27 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
 
   useEffect(() => {
     if (status === 'authenticated' && session) {
-      router.replace('/dashboard');
+      router.replace(callbackUrl);
     }
-  }, [status, session, router]);
+  }, [status, session, router, callbackUrl]);
 
   const handleSignIn = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const result = await signIn('google', {
-        callbackUrl: '/dashboard',
-        redirect: false,
+        callbackUrl,
+        redirect: true,
       });
 
       if (result?.error) {
         setError('Failed to sign in with Google');
         console.error('Sign in error:', result.error);
-      } else if (result?.url) {
-        router.push(result.url);
       }
     } catch (err) {
       setError('An unexpected error occurred');
