@@ -45,17 +45,37 @@ global.IntersectionObserver = jest.fn().mockImplementation(() => ({
 }));
 
 // Mock localStorage
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-  length: 0,
-  key: jest.fn(),
-  [Symbol.iterator]: jest.fn(),
-};
+class MockStorage implements Storage {
+  private store: Map<string, string> = new Map();
+  [name: string]: any;
+
+  get length(): number {
+    return this.store.size;
+  }
+
+  clear(): void {
+    this.store.clear();
+  }
+
+  getItem(key: string): string | null {
+    return this.store.get(key) || null;
+  }
+
+  key(index: number): string | null {
+    return Array.from(this.store.keys())[index] || null;
+  }
+
+  removeItem(key: string): void {
+    this.store.delete(key);
+  }
+
+  setItem(key: string, value: string): void {
+    this.store.set(key, value);
+  }
+}
+
 Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
+  value: new MockStorage(),
   writable: true,
 });
 
