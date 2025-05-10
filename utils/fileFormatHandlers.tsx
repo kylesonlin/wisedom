@@ -15,12 +15,18 @@ const csvHandler: FileFormatHandler = {
       const values = line.split(',').map(v => v.trim());
       const contact: Partial<Contact> = {
         id: crypto.randomUUID(),
-        userId,
         firstName: '',
         lastName: '',
+        name: '',
         email: '',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        status: 'active',
+        relationships: [{
+          userId,
+          type: 'primary',
+          permissions: ['view', 'edit', 'delete']
+        }]
       };
       
       headers.forEach((header, index) => {
@@ -31,10 +37,12 @@ const csvHandler: FileFormatHandler = {
           case 'firstname':
           case 'first_name':
             contact.firstName = value;
+            contact.name = `${value} ${contact.lastName || ''}`.trim();
             break;
           case 'lastname':
           case 'last_name':
             contact.lastName = value;
+            contact.name = `${contact.firstName || ''} ${value}`.trim();
             break;
           case 'email':
             contact.email = value;
@@ -51,14 +59,8 @@ const csvHandler: FileFormatHandler = {
           case 'birthday':
             contact.birthday = new Date(value);
             break;
-          case 'relationshipstrength':
-            contact.relationshipStrength = parseFloat(value);
-            break;
           case 'assignedto':
             contact.assignedTo = value;
-            break;
-          case 'tags':
-            contact.tags = value.split(';').map(tag => tag.trim());
             break;
           case 'notes':
             contact.notes = value;
@@ -88,23 +90,31 @@ const jsonHandler: FileFormatHandler = {
     try {
       const data = JSON.parse(content);
       if (Array.isArray(data)) {
-        return data.map(item => ({
-          id: crypto.randomUUID(),
-          userId,
-          firstName: item.name || '',
-          lastName: '',
-          email: item.email || '',
-          phone: item.phone,
-          company: item.company,
-          title: item.title,
-          birthday: item.birthday,
-          relationshipStrength: item.relationshipStrength,
-          assignedTo: item.assignedTo,
-          tags: item.tags,
-          notes: item.notes,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }));
+        return data.map(item => {
+          const firstName = item.name?.split(' ')[0] || '';
+          const lastName = item.name?.split(' ').slice(1).join(' ') || '';
+          return {
+            id: crypto.randomUUID(),
+            firstName,
+            lastName,
+            name: item.name || '',
+            email: item.email || '',
+            phone: item.phone,
+            company: item.company,
+            title: item.title,
+            birthday: item.birthday,
+            assignedTo: item.assignedTo,
+            notes: item.notes,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            status: 'active',
+            relationships: [{
+              userId,
+              type: 'primary',
+              permissions: ['view', 'edit', 'delete']
+            }]
+          } as Contact;
+        });
       }
       return [];
     } catch (e) {
@@ -134,12 +144,18 @@ const vCardHandler: FileFormatHandler = {
       
       const contact: Partial<Contact> = {
         id: crypto.randomUUID(),
-        userId,
         firstName: '',
         lastName: '',
+        name: '',
         email: '',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        status: 'active',
+        relationships: [{
+          userId,
+          type: 'primary',
+          permissions: ['view', 'edit', 'delete']
+        }]
       };
       
       const lines = vCard.split('\n');
@@ -157,6 +173,7 @@ const vCardHandler: FileFormatHandler = {
               contact.firstName = value;
               contact.lastName = '';
             }
+            contact.name = value;
             break;
           case 'EMAIL':
             contact.email = value;
