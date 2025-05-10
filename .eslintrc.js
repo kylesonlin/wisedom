@@ -8,4 +8,9 @@ module.exports = {
   rules: {
     '@next/next/no-img-element': 'off',
   },
+  settings: {
+    next: {
+      rootDir: '.',
+    },
+  },
 } 

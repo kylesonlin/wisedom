@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, ComponentType, ComponentProps } from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface LazyLoadProps {
@@ -22,12 +22,12 @@ export function LazyLoadWrapper({ children, fallback }: LazyLoadProps) {
   );
 }
 
-export function lazyLoad<P extends object>(
-  importFunc: () => Promise<{ default: React.ComponentType<P> }>
-) {
+export function lazyLoad<T extends ComponentType<any>>(
+  importFunc: () => Promise<{ default: T }>
+): ComponentType<ComponentProps<T>> {
   const LazyComponent = React.lazy(importFunc);
 
-  return function LazyLoadComponent(props: P) {
+  return function LazyLoadComponent(props: ComponentProps<T>) {
     return (
       <LazyLoadWrapper>
         <LazyComponent {...props} />
