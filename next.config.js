@@ -73,7 +73,6 @@ const nextConfig = {
   // ESLint configuration
   eslint: {
     ignoreDuringBuilds: false,
-    dirs: ['pages', 'components', 'lib', 'utils', 'types', 'services', 'tests'],
   },
 };
 

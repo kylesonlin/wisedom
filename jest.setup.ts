@@ -50,8 +50,14 @@ const localStorageMock = {
   setItem: jest.fn(),
   removeItem: jest.fn(),
   clear: jest.fn(),
+  length: 0,
+  key: jest.fn(),
+  [Symbol.iterator]: jest.fn(),
 };
-global.localStorage = localStorageMock;
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
 
 // Mock next/router
 jest.mock('next/router', () => ({
