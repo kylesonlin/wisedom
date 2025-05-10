@@ -1,7 +1,6 @@
 import { Contact } from '../types/contact';
-import { normalizeContacts } from './contactNormalization';
+import { normalizeContacts, NormalizedContact } from './contactNormalization';
 import { groupSimilarContacts } from './mlDuplicateDetection';
-import { NormalizedContact } from './contactNormalization';
 
 export type ProcessingStage = 'idle' | 'parsing' | 'validating' | 'normalizing' | 'saving' | 'complete';
 
@@ -9,7 +8,7 @@ interface BatchProcessorOptions {
   batchSize?: number;
   similarityThreshold?: number;
   onProgress?: (progress: number, stage: ProcessingStage) => void;
-  onBatchProcessed?: (batch: NormalizedContact[], stage: ProcessingStage) => void;
+  onBatchProcessed?: (batch: Contact[], stage: ProcessingStage) => void;
   onNormalizationComplete?: (normalizedContacts: NormalizedContact[]) => void;
   onError?: (error: Error) => void;
 }
@@ -37,7 +36,7 @@ export class BatchProcessor {
   private batchSize: number;
   private similarityThreshold: number;
   private onProgress?: (progress: number, stage: ProcessingStage) => void;
-  private onBatchProcessed?: (batch: NormalizedContact[], stage: ProcessingStage) => void;
+  private onBatchProcessed?: (batch: Contact[], stage: ProcessingStage) => void;
   private onNormalizationComplete?: (normalizedContacts: NormalizedContact[]) => void;
   private onError?: (error: Error) => void;
 
@@ -111,7 +110,7 @@ export class BatchProcessor {
         // Update progress
         const progress = Math.round(((i + 1) / batches.length) * 100);
         this.onProgress?.(progress, 'saving');
-        this.onBatchProcessed?.(mergedBatch, 'saving');
+        this.onBatchProcessed?.(validatedBatch, 'saving');
       }
 
       // Final pass to find similar contacts across all batches
