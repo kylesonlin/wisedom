@@ -55,16 +55,44 @@ function SignInContent() {
   const { data: session, status } = useSession({
     required: false,
   });
-  // TEMP: Show session and status for debugging
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
+
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      router.replace(callbackUrl);
+    }
+  }, [status, session, router, callbackUrl]);
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'authenticated') {
+    return null;
+  }
+
+  // Only show sign-in UI if NOT authenticated
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Debug Auth State
-        </h2>
-        <pre className="bg-gray-100 p-4 rounded text-xs overflow-x-auto">
-{JSON.stringify({ session, status }, null, 2)}
-        </pre>
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Sign in to Wisedom
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Access your mission control dashboard
+          </p>
+        </div>
+        <SignInButton callbackUrl={callbackUrl} />
       </div>
     </div>
   );
