@@ -69,6 +69,8 @@ export interface Contact {
   birthday?: Date;
   notes?: string;
   assignedTo?: string;
+  importance?: number;
+  urgency?: number;
   additionalFields?: Record<string, string | number | boolean | null | {
     mergedAt: Date;
     strategy: 'prefer_new' | 'prefer_existing' | 'combine' | 'custom';
