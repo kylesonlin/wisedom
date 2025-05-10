@@ -59,7 +59,7 @@ export class BatchProcessor {
     const threshold = options.similarityThreshold || this.similarityThreshold;
     
     const totalContacts = contacts.length;
-    const batches: NormalizedContact[][] = [];
+    const batches: Contact[][] = [];
     const processedContacts: NormalizedContact[] = [];
     const allSimilarityGroups: NormalizedContact[][] = [];
     const normalizationStats = {
@@ -69,28 +69,9 @@ export class BatchProcessor {
     };
 
     try {
-      // Convert contacts to NormalizedContact[]
-      const normalizedContacts = contacts.map(contact => ({
-        ...contact,
-        firstName: contact.firstName?.trim(),
-        lastName: contact.lastName?.trim(),
-        email: contact.email?.toLowerCase().trim(),
-        phone: contact.phone?.trim(),
-        normalizedEmail: contact.email?.toLowerCase().trim() ?? '',
-        source: 'batchProcessor',
-        confidence: 1,
-        normalizationTimestamp: new Date(),
-        originalValues: {
-          email: contact.email,
-          phone: contact.phone,
-          firstName: contact.firstName,
-          lastName: contact.lastName
-        }
-      }));
-
       // Split contacts into batches
       for (let i = 0; i < totalContacts; i += batchSize) {
-        batches.push(normalizedContacts.slice(i, i + batchSize));
+        batches.push(contacts.slice(i, i + batchSize));
       }
 
       // Process each batch
@@ -153,23 +134,14 @@ export class BatchProcessor {
     }
   }
 
-  private async validateBatch(batch: NormalizedContact[]): Promise<NormalizedContact[]> {
+  private async validateBatch(batch: Contact[]): Promise<Contact[]> {
     return batch.map(contact => ({
       ...contact,
-      firstName: contact.firstName?.trim(),
-      lastName: contact.lastName?.trim(),
-      email: contact.email?.toLowerCase().trim(),
+      firstName: contact.firstName?.trim() ?? '',
+      lastName: contact.lastName?.trim() ?? '',
+      email: contact.email?.toLowerCase().trim() ?? '',
       phone: contact.phone?.trim(),
-      normalizedEmail: contact.email?.toLowerCase().trim() ?? '',
-      source: 'batchProcessor',
-      confidence: 1,
-      normalizationTimestamp: new Date(),
-      originalValues: {
-        email: contact.email,
-        phone: contact.phone,
-        firstName: contact.firstName,
-        lastName: contact.lastName
-      }
+      name: `${contact.firstName?.trim() ?? ''} ${contact.lastName?.trim() ?? ''}`.trim()
     }));
   }
 

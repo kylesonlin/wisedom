@@ -188,10 +188,10 @@ const calculateSimilarityScore = (features: ContactFeatures): number => {
 
 // Group contacts by similarity
 export const groupSimilarContacts = (
-  contacts: NormalizedContact[],
+  contacts: (Contact | NormalizedContact)[],
   threshold = 0.8
 ): NormalizedContact[][] => {
-  const pairs = detectDuplicates(contacts, threshold);
+  const pairs = detectDuplicates(contacts as NormalizedContact[], threshold);
   const groups: NormalizedContact[][] = [];
   const processed = new Set<NormalizedContact>();
 
@@ -204,24 +204,26 @@ export const groupSimilarContacts = (
 
     // Find additional similar contacts
     for (const contact of contacts) {
-      if (processed.has(contact)) continue;
+      if (processed.has(contact as NormalizedContact)) continue;
 
-      const features = extractFeatures(pair.contact1, contact);
-      const similarityScore = calculateSimilarityScore(features);
+      const features1 = extractFeatures(pair.contact1, contact as NormalizedContact);
+      const features2 = extractFeatures(pair.contact2, contact as NormalizedContact);
+      const score1 = calculateSimilarityScore(features1);
+      const score2 = calculateSimilarityScore(features2);
 
-      if (similarityScore >= threshold) {
-        group.push(contact);
-        processed.add(contact);
+      if (Math.max(score1, score2) >= threshold) {
+        group.push(contact as NormalizedContact);
+        processed.add(contact as NormalizedContact);
       }
     }
 
     groups.push(group);
   }
 
-  // Add remaining contacts as single-item groups
+  // Add remaining unprocessed contacts as individual groups
   for (const contact of contacts) {
-    if (!processed.has(contact)) {
-      groups.push([contact]);
+    if (!processed.has(contact as NormalizedContact)) {
+      groups.push([contact as NormalizedContact]);
     }
   }
 
