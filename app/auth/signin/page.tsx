@@ -1,7 +1,36 @@
 'use client';
 import { signIn } from 'next-auth/react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function SignIn() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await signIn('google', {
+        callbackUrl: '/',
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError('Failed to sign in with Google');
+        console.error('Sign in error:', result.error);
+      } else if (result?.url) {
+        router.push(result.url);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+      console.error('Sign in error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -15,11 +44,17 @@ export default function SignIn() {
         </div>
         <div>
           <button
-            onClick={() => signIn('google', { callbackUrl: '/' })}
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            onClick={handleSignIn}
+            disabled={isLoading}
+            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign in with Google
+            {isLoading ? 'Signing in...' : 'Sign in with Google'}
           </button>
+          {error && (
+            <p className="mt-2 text-center text-sm text-red-600">
+              {error}
+            </p>
+          )}
         </div>
       </div>
     </div>
