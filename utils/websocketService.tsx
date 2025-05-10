@@ -33,31 +33,35 @@ class WebSocketService {
   private connect() {
     if (typeof window === 'undefined') return;
 
-    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:3001';
-    this.ws = new WebSocket(wsUrl);
+    try {
+      const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:3001';
+      this.ws = new WebSocket(wsUrl);
 
-    this.ws.onopen = () => {
-      console.log('WebSocket connected');
-      this.reconnectAttempts = 0;
-    };
+      this.ws.onopen = () => {
+        console.log('WebSocket connected');
+        this.reconnectAttempts = 0;
+      };
 
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        this.callbacks.forEach(callback => callback(data));
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this.callbacks.forEach(callback => callback(data));
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
 
-    this.ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      this.reconnect();
-    };
+      this.ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        this.reconnect();
+      };
 
-    this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+    } catch (error) {
+      console.error('Error initializing WebSocket:', error);
+    }
   }
 
   private reconnect() {
@@ -74,6 +78,7 @@ class WebSocketService {
   }
 
   public subscribe(callback: WebSocketCallback) {
+    if (typeof window === 'undefined') return () => {};
     this.callbacks.push(callback);
     return () => {
       this.callbacks = this.callbacks.filter(cb => cb !== callback);

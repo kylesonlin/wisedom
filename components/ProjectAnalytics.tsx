@@ -36,9 +36,14 @@ export default function ProjectAnalyticsComponent({ project, contacts, interacti
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'day' | 'week' | 'month'>('week');
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
 
     async function loadAnalytics() {
       try {
@@ -71,9 +76,9 @@ export default function ProjectAnalyticsComponent({ project, contacts, interacti
     return () => {
       unsubscribe();
     };
-  }, [project, contacts, interactions]);
+  }, [project, contacts, interactions, isClient]);
 
-  if (typeof window === 'undefined') {
+  if (!isClient) {
     return null;
   }
 
