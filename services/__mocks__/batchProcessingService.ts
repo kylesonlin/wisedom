@@ -1,5 +1,5 @@
 import { BatchProcessor, BatchProcessingState } from '@/types/batch.types';
-import { NormalizedContact, ContactImportResult, ContactImportOptions } from '@/types/contact.types';
+import { NormalizedContact, ContactImportResult, ContactImportOptions } from '@/types/contact';
 
 export class MockBatchProcessor implements BatchProcessor {
   private state: BatchProcessingState = {

@@ -1,7 +1,7 @@
 import { BatchProcessingService, BatchProcessingOptions } from '@/services/batchProcessingService';
 import { mockContacts, mockInvalidContacts, mockDuplicateContacts } from './__fixtures__/contacts';
 import { mockBatchProcessor } from '@/services/__mocks__/batchProcessingService';
-import { NormalizedContact } from '@/types/contact.types';
+import { NormalizedContact } from '@/types/contact';
 import '@testing-library/jest-dom';
 
 // Mock the BatchProcessingService

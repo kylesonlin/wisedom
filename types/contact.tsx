@@ -7,6 +7,8 @@ export interface ContactMetadata {
   tags?: string[];
   notes?: string;
   customFields?: Record<string, string | number | boolean | null>;
+  lastSyncAt?: Date;
+  syncSource?: string;
 }
 
 export interface ContactSettings {
@@ -89,6 +91,53 @@ export interface Contact {
     permissions: Array<'view' | 'edit' | 'delete'>;
   }[];
 }
+
+export interface NormalizedContact extends Omit<Contact, 'email' | 'phone' | 'firstName' | 'lastName'> {
+  email: string;
+  normalizedEmail: string;
+  phone?: string;
+  normalizedPhone?: string;
+  firstName?: string;
+  lastName?: string;
+  normalizedName?: string;
+  source: string;
+  confidence: number;
+  normalizationTimestamp: Date;
+  originalValues: {
+    email?: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+  };
+}
+
+export interface ContactImportResult {
+  contacts: NormalizedContact[];
+  totalProcessed: number;
+  duplicatesFound: number;
+  processingTime: number;
+  normalizationStats: {
+    emailsNormalized: number;
+    phonesNormalized: number;
+    namesNormalized: number;
+  };
+  batchStats: {
+    totalBatches: number;
+    averageBatchSize: number;
+  };
+}
+
+export interface ContactImportOptions {
+  batchSize: number;
+  similarityThreshold: number;
+  onProgress?: (progress: number) => void;
+  onBatchProcessed?: (batch: NormalizedContact[]) => void;
+  onNormalizationComplete?: (stats: ContactImportResult) => void;
+  onError?: (error: Error) => void;
+}
+
+export type ContactStatus = 'active' | 'inactive' | 'archived';
+export type ContactSource = 'manual' | 'import' | 'api' | 'test';
 
 export interface ContactListOptions {
   filterOptions: ContactFilterOptions;

@@ -1,4 +1,4 @@
-import { NormalizedContact } from '@/types/contact.types';
+import { NormalizedContact } from '@/types/contact';
 
 export const mockContacts: NormalizedContact[] = [
   {
