@@ -1,4 +1,5 @@
 import { Contact } from '../types/contact';
+import { NormalizedContact } from './contactNormalization';
 import { normalizeEmail, normalizePhone, normalizeName } from './contactNormalization';
 
 interface ContactFeatures {
@@ -13,14 +14,14 @@ interface ContactFeatures {
 }
 
 interface ContactPair {
-  contact1: Contact;
-  contact2: Contact;
+  contact1: NormalizedContact;
+  contact2: NormalizedContact;
   features: ContactFeatures;
   similarityScore: number;
 }
 
 // Feature extraction functions
-const extractFeatures = (contact1: Contact, contact2: Contact): ContactFeatures => {
+const extractFeatures = (contact1: NormalizedContact, contact2: NormalizedContact): ContactFeatures => {
   return {
     emailSimilarity: calculateEmailSimilarity(contact1.email, contact2.email),
     phoneSimilarity: calculatePhoneSimilarity(contact1.phone, contact2.phone),
@@ -131,7 +132,7 @@ const getPhoneticRepresentation = (name: string): string => {
     .replace(/(.)\1+/g, '$1');
 };
 
-const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+const getFullName = (contact: NormalizedContact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
 
 // Weight configuration for different features
 const featureWeights: Record<keyof ContactFeatures, number> = {
@@ -147,7 +148,7 @@ const featureWeights: Record<keyof ContactFeatures, number> = {
 
 // Main duplicate detection function
 export const detectDuplicates = (
-  contacts: Contact[],
+  contacts: NormalizedContact[],
   threshold = 0.8
 ): ContactPair[] => {
   const pairs: ContactPair[] = [];
@@ -187,12 +188,12 @@ const calculateSimilarityScore = (features: ContactFeatures): number => {
 
 // Group contacts by similarity
 export const groupSimilarContacts = (
-  contacts: Contact[],
+  contacts: NormalizedContact[],
   threshold = 0.8
-): Contact[][] => {
+): NormalizedContact[][] => {
   const pairs = detectDuplicates(contacts, threshold);
-  const groups: Contact[][] = [];
-  const processed = new Set<Contact>();
+  const groups: NormalizedContact[][] = [];
+  const processed = new Set<NormalizedContact>();
 
   for (const pair of pairs) {
     if (processed.has(pair.contact1) || processed.has(pair.contact2)) continue;
@@ -217,7 +218,7 @@ export const groupSimilarContacts = (
     groups.push(group);
   }
 
-  // Add remaining contacts as singleuitem groups
+  // Add remaining contacts as single-item groups
   for (const contact of contacts) {
     if (!processed.has(contact)) {
       groups.push([contact]);

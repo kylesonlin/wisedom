@@ -153,7 +153,8 @@ export const verifyTwoFactor = async (challengeId: string, code: string): Promis
     // Then verify with the challenge
     const { data, error } = await supabase.auth.mfa.verify({
       challengeId: challengeData.id,
-      code
+      code,
+      factorId: challengeId
     });
 
     if (error) throw new AuthError(error.message, '2FA_VERIFICATION_FAILED');

@@ -1,116 +1,115 @@
 import { Contact } from '../types/contact';
+import { NormalizedContact } from '../utils/contactNormalization';
 
 // Safe function evaluation
-export const safeEvaluateFunction = (fnString: string, ...args: any[]): any => {
+export function safeEvaluateFunction<T>(fn: string, defaultValue: T): T {
   try {
-    const fn = new Function(...args.map((_, i) => `arg${i}`), fnString);
-    return fn(...args);
+    const result = new Function(`return ${fn}`)();
+    return result;
   } catch (error) {
     console.error('Error evaluating function:', error);
-    return null;
+    return defaultValue;
   }
-};
+}
 
 // Safe date parsing
-export const safeParseDate = (date: string | Date | null): Date | null => {
-  if (!date) return null;
+export function safeParseDate(dateStr: string, defaultValue: Date = new Date()): Date {
   try {
-    const parsed = new Date(date);
-    return isNaN(parsed.getTime()) ? null : parsed;
-  } catch {
-    return null;
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? defaultValue : date;
+  } catch (error) {
+    console.error('Error parsing date:', error);
+    return defaultValue;
   }
-};
+}
 
 // Environment variable validation
-export const validateEnvVars = () => {
+export function validateEnvVars(): void {
   const requiredVars = [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY'
   ];
-  
-  const missing = requiredVars.filter(varName => !process.env[varName]);
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
-};
 
-// Safe Supabase operation wrapper
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  if (missingVars.length > 0) {
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+  }
+}
+
+// Safe Supabase operation
 export async function safeSupabaseOperation<T>(
-  operation: () => Promise<{ data: T; error: any }>
+  operation: () => Promise<T>,
+  errorMessage: string
 ): Promise<T> {
   try {
-    const { data, error } = await operation();
-    if (error) {
-      console.error('Supabase operation failed:', error);
-      throw error;
-    }
-    return data;
+    return await operation();
   } catch (error) {
-    console.error('Error in safeSupabaseOperation:', error);
+    console.error(errorMessage, error);
     throw error;
   }
 }
 
 // Batch processing with retry
-export async function processBatchWithRetry<T, R>(
+export async function processBatchWithRetry<T extends NormalizedContact, R>(
   items: T[],
   processFn: (batch: T[]) => Promise<R>,
   options: {
-    batchSize?: number;
     maxRetries?: number;
+    batchSize?: number;
     retryDelay?: number;
   } = {}
 ): Promise<R> {
   const {
-    batchSize = 100,
     maxRetries = 3,
+    batchSize = 100,
     retryDelay = 1000
   } = options;
 
-  let lastError: Error | null = null;
-  let retryCount = 0;
+  const batches: T[][] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    batches.push(items.slice(i, i + batchSize));
+  }
 
-  while (retryCount < maxRetries) {
+  let lastError: Error | null = null;
+  for (let retry = 0; retry < maxRetries; retry++) {
     try {
-      return await processFn(items);
+      return await processFn(batches[0]);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      retryCount++;
-      
-      if (retryCount < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+      if (retry < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay * (retry + 1)));
       }
     }
   }
 
-  throw lastError || new Error('Failed to process batch after retries');
+  throw lastError || new Error('Failed to process batch after all retries');
 }
 
 // Resource cleanup
-export const cleanupResources = (setters: {
-  setContacts: (contacts: Contact[]) => void;
-  setSimilarityGroups: (groups: Contact[][]) => void;
-  setPreviewContacts: (contacts: Contact[]) => void;
-  setOperationHistory: (history: any[]) => void;
-  setHistoryIndex: (index: number) => void;
-}) => {
-  setters.setContacts([]);
-  setters.setSimilarityGroups([]);
-  setters.setPreviewContacts([]);
-  setters.setOperationHistory([]);
-  setters.setHistoryIndex(-1);
-};
+export function cleanupResources(
+  setContacts: React.Dispatch<React.SetStateAction<NormalizedContact[]>>,
+  setSimilarityGroups: React.Dispatch<React.SetStateAction<NormalizedContact[][]>>,
+  setPreviewContacts: React.Dispatch<React.SetStateAction<NormalizedContact[]>>,
+  setOperationHistory: React.Dispatch<React.SetStateAction<Array<{
+    type: 'edit' | 'delete' | 'group';
+    contacts: NormalizedContact[];
+    timestamp: number;
+    description: string;
+    preview?: NormalizedContact[];
+  }>>>,
+  setHistoryIndex: React.Dispatch<React.SetStateAction<number>>
+): void {
+  setContacts([]);
+  setSimilarityGroups([]);
+  setPreviewContacts([]);
+  setOperationHistory([]);
+  setHistoryIndex(-1);
+}
 
-// Enhanced duplicate detection with null safety
-export const isPotentialDuplicate = (contactA: Contact, contactB: Contact): boolean => {
-  if (!contactA || !contactB) return false;
-  
-  const emailMatch = Boolean(contactA.email) && Boolean(contactB.email) && contactA.email === contactB.email;
-  const phoneMatch = Boolean(contactA.phone) && Boolean(contactB.phone) && contactA.phone === contactB.phone;
-  const getFullName = (contact: any) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
-  const nameMatch = Boolean(getFullName(contactA)) && Boolean(getFullName(contactB)) &&
-    getFullName(contactA).trim().toLowerCase() === getFullName(contactB).trim().toLowerCase();
-  
-  return emailMatch || phoneMatch || (nameMatch && Boolean(contactA.email || contactA.phone) && Boolean(contactB.email || contactB.phone));
-}; 
+// Duplicate detection
+export function isPotentialDuplicate(contact1: NormalizedContact, contact2: NormalizedContact): boolean {
+  const emailMatch = contact1.email && contact2.email && contact1.email === contact2.email;
+  const phoneMatch = contact1.phone && contact2.phone && contact1.phone === contact2.phone;
+  const nameMatch = contact1.firstName === contact2.firstName && contact1.lastName === contact2.lastName;
+  return emailMatch || phoneMatch || nameMatch;
+} 

@@ -52,11 +52,14 @@ export async function validateRequest(req: NextRequest): Promise<NextResponse | 
         const isValid = await rule.validate(req);
         if (!isValid) {
           await securityMonitoring.logEvent({
-            type: 'auth_failure',
+            type: 'login',
             severity: 'medium',
-            message: rule.errorMessage,
-            metadata: { path, method },
-            timestamp: new Date(),
+            details: {
+              message: rule.errorMessage,
+              path,
+              method
+            },
+            userId: 'system',
             ip: req.headers.get('x-forwarded-for') || 'unknown',
             userAgent: req.headers.get('user-agent') || 'unknown'
           });

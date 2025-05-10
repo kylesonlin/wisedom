@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/nextjs';
-import { BrowserTracing } from '@sentry/tracing';
 import { Replay } from '@sentry/replay';
 
 export class ErrorTrackingService {
@@ -13,7 +12,6 @@ export class ErrorTrackingService {
         environment: process.env.NODE_ENV,
         tracesSampleRate: 1.0,
         integrations: [
-          new BrowserTracing(),
           new Replay(),
         ],
       });

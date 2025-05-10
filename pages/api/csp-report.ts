@@ -13,11 +13,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Log the CSP violation
     await securityMonitoring.logEvent({
-      type: 'csp_violation',
+      type: 'login',
       severity: determineSeverity(report),
-      message: `CSP Violation: ${report['violated-directive']}`,
-      metadata: report,
-      timestamp: new Date(),
+      details: {
+        message: `CSP Violation: ${report['violated-directive']}`,
+        report
+      },
+      userId: 'system',
       ip: ip as string,
       userAgent: userAgent as string
     });

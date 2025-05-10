@@ -12,7 +12,7 @@ import { Input } from "./Input"
 import { ScrollArea } from "./ScrollArea"
 import { Separator } from "./Separator"
 import { Skeleton } from "./Skeleton"
-import { Sheet, SheetContent } from "./Sheet"
+import { Sheet, SheetContent } from "."
 import {
   Tooltip,
   TooltipContent,

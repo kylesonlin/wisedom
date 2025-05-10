@@ -2,20 +2,9 @@ import React, { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/Modal';
 import { Card } from '@/components/ui/Card';
-
-const navigationItems = [
-  {
-    label: 'Dashboard',
-    href: '/dashboard',
-  },
-  {
-    label: 'Forms',
-    href: '/forms',
-  },
-];
 
 const priorityOptions = [
   { value: 'low', label: 'Low' },
@@ -57,11 +46,7 @@ export default function FormExample() {
   };
 
   return (
-    <Layout
-      navigationItems={navigationItems}
-      activePath="/forms"
-      logo={<span className="text-xl font-bold">MyApp</span>}
-    >
+    <Layout>
       <div className="p-6">
         <h1 className="text-2xl font-bold">Form Example</h1>
         <p className="mt-2 text-muted-foreground">
@@ -70,42 +55,60 @@ export default function FormExample() {
 
         <Card className="mt-6 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              aria-aria-aria-label="First Name"
-              placeholder="Enter your first name"
-              value={formData.firstName}
-              onValueChange={(value: string) =>
-                setFormData((prev) => ({ ...prev, firstName: value }))}
-              data-data-error={errors.firstName}
-            />
+            <div>
+              <Input
+                aria-label="First Name"
+                placeholder="Enter your first name"
+                value={formData.firstName}
+                onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
+                className={errors.firstName ? 'border-red-500' : ''}
+              />
+              {errors.firstName && (
+                <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>
+              )}
+            </div>
 
-            <Input
-              aria-aria-aria-label="Last Name"
-              placeholder="Enter your last name"
-              value={formData.lastName}
-              onValueChange={(value: string) =>
-                setFormData((prev) => ({ ...prev, lastName: value }))}
-              data-data-error={errors.lastName}
-            />
+            <div>
+              <Input
+                aria-label="Last Name"
+                placeholder="Enter your last name"
+                value={formData.lastName}
+                onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
+                className={errors.lastName ? 'border-red-500' : ''}
+              />
+              {errors.lastName && (
+                <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>
+              )}
+            </div>
 
-            <Input
-              aria-aria-aria-label="Email"
-              type="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onValueChange={(value: string) =>
-                setFormData((prev) => ({ ...prev, email: value }))}
-              data-data-error={errors.email}
-            />
+            <div>
+              <Input
+                aria-label="Email"
+                type="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                className={errors.email ? 'border-red-500' : ''}
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+              )}
+            </div>
 
-            <Select
-              aria-aria-aria-label="Priority"
-              value={formData.priority}
-              onValueChange={(value: string) =>
-                setFormData({ ...formData, priority: value })
-              }
-              options={priorityOptions}
-            />
+            <div>
+              <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {priorityOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="flex justify-end">
               <Button type="submit">Submit</Button>

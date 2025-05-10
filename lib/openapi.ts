@@ -13,6 +13,7 @@ export const openApiConfig: OpenAPIV3.Document = {
       description: 'API Server',
     },
   ],
+  paths: {},
   components: {
     securitySchemes: {
       bearerAuth: {

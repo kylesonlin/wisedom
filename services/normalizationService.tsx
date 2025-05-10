@@ -92,7 +92,7 @@ export class NormalizationService {
     const allRules = this.getRules();
     
     const stringFields: (keyof Contact)[] = [
-      'id', 'firstName', 'lastName', 'email', 'phone', 'company', 'title', 'birthday', 'assignedTo', 'notes', 'source'
+      'id', 'firstName', 'lastName', 'email', 'phone', 'company', 'title', 'birthday', 'notes'
     ];
 
     allRules.forEach(rule => {

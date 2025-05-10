@@ -28,8 +28,8 @@ import {
 import { BatchProcessor, ProcessingStage } from '../utils/batchProcessor';
 import { useDropzone } from 'react-dropzone';
 import { useContactStore } from '../store/contactStore';
-import { useToast } from '../hooks/useToast';
-import { normalizeContacts } from '../utils/contactNormalization';
+import { useToast, toast } from '../components/ui/useToast';
+import { normalizeContacts, normalizeContact, NormalizedContact } from '../utils/contactNormalization';
 import { groupSimilarContacts } from '../utils/mlDuplicateDetection';
 import { SaveError } from '../utils/errorHandling';
 
@@ -54,7 +54,16 @@ type ImportAnalytics = {
 };
 
 interface BatchProcessingResult {
-  similarityGroups: Contact[][];
+  contacts: NormalizedContact[];
+  similarityGroups: NormalizedContact[][];
+  totalProcessed: number;
+  processingTime: number;
+  duplicatesFound: number;
+  normalizationStats: {
+    emailsNormalized: number;
+    phonesNormalized: number;
+    namesNormalized: number;
+  };
   batchStats: {
     totalBatches: number;
     processedBatches: number;
@@ -129,8 +138,8 @@ interface ImportState {
   progress: number;
   stats: ImportStats;
   errors: ImportError[];
-  duplicates: Contact[][];
-  normalizedContacts: Contact[];
+  duplicates: NormalizedContact[][];
+  normalizedContacts: NormalizedContact[];
 }
 
 const initialState: ImportState = {
@@ -152,8 +161,7 @@ const initialState: ImportState = {
 const ContactImport: React.FC = () => {
   const [state, setState] = useState<ImportState>(initialState);
   const { addContacts } = useContactStore();
-  const { showToast } = useToast();
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contacts, setContacts] = useState<NormalizedContact[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<ImportError | null>(null);
@@ -171,7 +179,7 @@ const ContactImport: React.FC = () => {
     warningCount: 0,
     processingTime: 0
   });
-  const [similarityGroups, setSimilarityGroups] = useState<Contact[][]>([]);
+  const [similarityGroups, setSimilarityGroups] = useState<NormalizedContact[][]>([]);
   const [progress, setProgress] = useState(0);
   const [selectedFormat, setSelectedFormat] = useState<'auto' | 'csv' | 'json' | 'vcard'>('auto');
   const [showHelp, setShowHelp] = useState(false);
@@ -187,7 +195,7 @@ const ContactImport: React.FC = () => {
     failedBatches: number;
     duplicatesPerBatch: Record<number, number>;
   }>({ totalBatches: 0, processedBatches: 0, failedBatches: 0, duplicatesPerBatch: {} });
-  const [previewContacts, setPreviewContacts] = useState<Contact[]>([]);
+  const [previewContacts, setPreviewContacts] = useState<NormalizedContact[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     searchTerm: '',
@@ -232,10 +240,10 @@ const ContactImport: React.FC = () => {
   }>>([]);
   const [operationHistory, setOperationHistory] = useState<Array<{
     type: 'edit' | 'delete' | 'group';
-    contacts: Contact[];
+    contacts: NormalizedContact[];
     timestamp: number;
     description: string;
-    preview?: Contact[];
+    preview?: NormalizedContact[];
   }>>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [draggedFilterGroup, setDraggedFilterGroup] = useState<string | null>(null);
@@ -253,6 +261,7 @@ const ContactImport: React.FC = () => {
   }>>([]);
 
   const batchProcessor = BatchProcessingService.getInstance();
+
   const normalizationService = NormalizationService.getInstance();
 
   const resetState = useCallback(() => {
@@ -266,26 +275,64 @@ const ContactImport: React.FC = () => {
     const fileType = file.name.split('.').pop()?.toLowerCase();
 
     if (!fileType || !['csv', 'json'].includes(fileType)) {
-      showToast('Please upload a CSV or JSON file', 'error');
+      toast({ title: 'Please upload a CSV or JSON file', variant: 'destructive' });
       return;
     }
 
     setState(prev => ({
       ...prev,
       isImporting: true,
-      stage: 'parsing',
+      stage: 'parsing' as ProcessingStage,
       progress: 0,
       errors: []
     }));
 
     try {
       const text = await file.text();
-      let contacts: Contact[] = [];
+      let contacts: NormalizedContact[] = [];
 
       if (fileType === 'csv') {
-        contacts = parseCSV(text, 'placeholder_userId');
+        const parsedContacts = parseCSV(text, 'placeholder_userId');
+        contacts = parsedContacts.map(contact => ({
+          ...contact,
+          email: contact.email?.toLowerCase().trim() ?? '',
+          phone: contact.phone?.trim(),
+          firstName: contact.firstName?.trim(),
+          lastName: contact.lastName?.trim(),
+          normalizedEmail: contact.email?.toLowerCase().trim() ?? '',
+          normalizedPhone: contact.phone?.trim(),
+          normalizedName: `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim(),
+          source: 'csv',
+          confidence: 1.0,
+          normalizationTimestamp: new Date(),
+          originalValues: {
+            email: contact.email,
+            phone: contact.phone,
+            firstName: contact.firstName,
+            lastName: contact.lastName
+          }
+        }));
       } else {
-        contacts = parseJSON(text);
+        const parsedContacts = parseJSON(text);
+        contacts = parsedContacts.map(contact => ({
+          ...contact,
+          email: contact.email?.toLowerCase().trim() ?? '',
+          phone: contact.phone?.trim(),
+          firstName: contact.firstName?.trim(),
+          lastName: contact.lastName?.trim(),
+          normalizedEmail: contact.email?.toLowerCase().trim() ?? '',
+          normalizedPhone: contact.phone?.trim(),
+          normalizedName: `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim(),
+          source: 'json',
+          confidence: 1.0,
+          normalizationTimestamp: new Date(),
+          originalValues: {
+            email: contact.email,
+            phone: contact.phone,
+            firstName: contact.firstName,
+            lastName: contact.lastName
+          }
+        }));
       }
 
       setState(prev => ({
@@ -296,14 +343,14 @@ const ContactImport: React.FC = () => {
         }
       }));
 
-      const batchProcessor = new BatchProcessor({
+      const result = await batchProcessor.processContacts(contacts, {
         batchSize: 50,
         similarityThreshold: 0.8,
         onProgress: (progress, stage) => {
           setState(prev => ({
             ...prev,
             progress,
-            stage
+            stage: stage as ProcessingStage
           }));
         },
         onBatchProcessed: (batch, stage) => {
@@ -318,42 +365,19 @@ const ContactImport: React.FC = () => {
         onNormalizationComplete: (normalizedContacts) => {
           setState(prev => ({
             ...prev,
-            stage: 'normalizing',
+            stage: 'normalizing' as ProcessingStage,
             normalizedContacts: [...prev.normalizedContacts, ...normalizedContacts],
             stats: {
               ...prev.stats,
               normalized: prev.stats.normalized + normalizedContacts.length
             }
           }));
-        },
-        onError: (error) => {
-          const importError = error instanceof ImportError
-            ? error
-            : new ImportError('PROCESSING_ERROR', 'Failed to process file', {
-                file: file?.name || 'unknown',
-                lineNumber: 0,
-                code: 'PROCESSING_ERROR',
-                sessionId: Date.now().toString(),
-                fileFormat: file?.name?.toLowerCase().endsWith('.json') ? 'json' : 'csv',
-                userId: 'current-user', // This should be replaced with actual user ID
-                batchIndex: 0,
-                timestamp: new Date(),
-                errorDetails: {
-                  message: error instanceof Error ? error.message : String(error)
-                }
-              });
-          setState(prev => ({
-            ...prev,
-            errors: [...prev.errors, importError]
-          }));
         }
       });
 
-      const result = await batchProcessor.processContacts(contacts);
-
       setState(prev => ({
         ...prev,
-        stage: 'complete',
+        stage: 'complete' as ProcessingStage,
         progress: 100,
         stats: {
           ...prev.stats,
@@ -362,7 +386,7 @@ const ContactImport: React.FC = () => {
         duplicates: result.similarityGroups
       }));
 
-      showToast(`Successfully imported ${result.contacts.length} contacts`, 'success');
+      toast({ title: `Successfully imported ${result.contacts.length} contacts`, variant: 'default' });
     } catch (error) {
       const importError = error instanceof ImportError
         ? error
@@ -372,7 +396,7 @@ const ContactImport: React.FC = () => {
             code: 'PROCESSING_ERROR',
             sessionId: Date.now().toString(),
             fileFormat: file?.name?.toLowerCase().endsWith('.json') ? 'json' : 'csv',
-            userId: 'current-user', // This should be replaced with actual user ID
+            userId: 'current-user',
             batchIndex: 0,
             timestamp: new Date(),
             errorDetails: {
@@ -383,17 +407,17 @@ const ContactImport: React.FC = () => {
       setState(prev => ({
         ...prev,
         isImporting: false,
-        stage: 'idle',
+        stage: 'idle' as ProcessingStage,
         errors: [...prev.errors, importError]
       }));
 
-      showToast(importError.message, 'error');
+      toast({ title: importError.message, variant: 'destructive' });
     }
-  }, [showToast]);
+  }, [toast]);
 
   const handleSaveContacts = useCallback(async () => {
     if (state.normalizedContacts.length === 0) {
-      showToast('No contacts to save', 'error');
+      toast({ title: 'No contacts to save', variant: 'destructive' });
       return;
     }
 
@@ -404,7 +428,11 @@ const ContactImport: React.FC = () => {
     }));
 
     try {
-      await addContacts(state.normalizedContacts);
+      await addContacts(state.normalizedContacts.map(c => ({
+        ...c,
+        firstName: c.firstName ?? '',
+        lastName: c.lastName ?? '',
+      })));
       
       setState(prev => ({
         ...prev,
@@ -412,7 +440,7 @@ const ContactImport: React.FC = () => {
         progress: 100
       }));
 
-      showToast('Contacts saved successfully', 'success');
+      toast({ title: 'Contacts saved successfully', variant: 'default' });
       resetState();
     } catch (error) {
       const importError = error instanceof ImportError
@@ -437,9 +465,9 @@ const ContactImport: React.FC = () => {
         errors: [...prev.errors, importError]
       }));
 
-      showToast(importError.message, 'error');
+      toast({ title: importError.message, variant: 'destructive' });
     }
-  }, [state.normalizedContacts, addContacts, showToast, resetState, file]);
+  }, [state.normalizedContacts, addContacts, resetState, file]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: handleFileUpload,
@@ -466,12 +494,11 @@ const ContactImport: React.FC = () => {
         });
       });
 
-      const result = await processBatchWithRetry<Contact, BatchProcessingResult>(
+      const result = await processBatchWithRetry<NormalizedContact, BatchProcessingResult>(
         contacts,
         async (batch) => {
           const processed = await batchProcessor.processContacts(batch, {
             batchSize: 1000,
-            maxParallelBatches: 4,
             similarityThreshold: 0.8,
             onProgress: (progress, stage) => {
               setProgress(progress);
@@ -525,9 +552,15 @@ const ContactImport: React.FC = () => {
     normalizationService.removeCustomRule(index);
   };
 
-  const handleRevertChanges = (contact: Contact) => {
-    const reverted = normalizationService.revertChanges(contact);
-    setContacts(prev => prev.map(c => c.id === contact.id ? reverted : c));
+  const handleRevertChanges = (contact: NormalizedContact) => {
+    setPreviewContacts(prev => {
+      const newContacts = [...prev];
+      const index = newContacts.findIndex(c => c.id === contact.id);
+      if (index !== -1) {
+        newContacts[index] = { ...contact };
+      }
+      return newContacts;
+    });
   };
 
   const handleFilterChange = (field: keyof typeof filterOptions, value: any) => {
@@ -594,7 +627,7 @@ const ContactImport: React.FC = () => {
       if (bulkEditOperation === 'template') {
         let newValue = bulkEditTemplate;
         Object.keys(contact).forEach(field => {
-          const value = contact[field as keyof Contact]?.toString() || '';
+          const value = contact[field as keyof NormalizedContact]?.toString() || '';
           newValue = newValue.replace(new RegExp(`\\{${field}\\}`, 'g'), value);
         });
         (contact as any)[bulkEditField] = newValue;
@@ -797,70 +830,75 @@ const ContactImport: React.FC = () => {
     }
 
     // Apply custom filters
-    const applyCustomFilter = (contact: Contact, filter: CustomFilter) => {
+    const applyCustomFilter = (contact: NormalizedContact, filter: CustomFilter): boolean => {
       const value = contact[filter.field]?.toString() || '';
-      const filterValue = filter.value;
-      const filterValue2 = filter.value2;
-      
-      if (filter.isRegex) {
-        try {
-          const regex = new RegExp(filterValue, filter.caseSensitive ? '' : 'i');
-          return regex.test(value);
-        } catch (e) {
-          return false;
-        }
-      }
+      const filterValue = filter.value.toLowerCase();
+      const value2 = filter.value2?.toLowerCase();
 
-      const compareValue = filter.caseSensitive ? value : value.toLowerCase();
-      const compareFilterValue = filter.caseSensitive ? filterValue : filterValue.toLowerCase();
-      const compareFilterValue2 = filter.caseSensitive ? filterValue2 : filterValue2?.toLowerCase();
-      
       switch (filter.operator) {
         case 'contains':
-          return compareValue.includes(compareFilterValue);
+          return value.toLowerCase().includes(filterValue);
         case 'equals':
-          return compareValue === compareFilterValue;
+          return value.toLowerCase() === filterValue;
         case 'startsWith':
-          return compareValue.startsWith(compareFilterValue);
+          return value.toLowerCase().startsWith(filterValue);
         case 'endsWith':
-          return compareValue.endsWith(compareFilterValue);
+          return value.toLowerCase().endsWith(filterValue);
+        case 'regex':
+          try {
+            const regex = new RegExp(filterValue, filter.isRegex ? 'g' : '');
+            return regex.test(value);
+          } catch (e) {
+            console.error('Invalid regex:', e);
+            return false;
+          }
+        case 'custom':
+          if (filter.customFunction) {
+            try {
+              const filterFunc = new Function('value', filter.customFunction);
+              return filterFunc(value);
+            } catch (e) {
+              console.error('Invalid custom function:', e);
+              return false;
+            }
+          }
+          return false;
         case 'greaterThan':
-          return Number(compareValue) > Number(compareFilterValue);
+          return value > filterValue;
         case 'lessThan':
-          return Number(compareValue) < Number(compareFilterValue);
+          return value < filterValue;
         case 'between':
-          if (!compareFilterValue2) return true;
-          const numValue = Number(compareValue);
-          return numValue >= Number(compareFilterValue) && numValue <= Number(compareFilterValue2);
+          return value >= filterValue && value <= (value2 || '');
         case 'dateBefore':
-          const dateValue = new Date(compareValue);
-          const beforeDate = new Date(compareFilterValue);
-          return dateValue < beforeDate;
+          return new Date(value) < new Date(filterValue);
         case 'dateAfter':
-          const afterDate = new Date(compareFilterValue);
-          return new Date(compareValue) > afterDate;
+          return new Date(value) > new Date(filterValue);
         case 'dateBetween':
-          if (!compareFilterValue2) return true;
-          const date = new Date(compareValue);
-          const startDate = new Date(compareFilterValue);
-          const endDate = new Date(compareFilterValue2);
-          return date >= startDate && date <= endDate;
+          return new Date(value) >= new Date(filterValue) && new Date(value) <= new Date(value2 || '');
         case 'matchesPattern':
-          try {
-            const pattern = new RegExp(filter.validationPattern || '');
-            return pattern.test(value);
-          } catch (e) {
-            return false;
+          if (filter.validationPattern) {
+            try {
+              const regex = new RegExp(filter.validationPattern);
+              return regex.test(value);
+            } catch (e) {
+              console.error('Invalid pattern:', e);
+              return false;
+            }
           }
+          return false;
         case 'customValidation':
-          try {
-            const validate = new Function('value', filter.customFunction || 'return true;');
-            return validate(value);
-          } catch (e) {
-            return false;
+          if (filter.customFunction) {
+            try {
+              const validationFunc = new Function('value', filter.customFunction);
+              return validationFunc(value);
+            } catch (e) {
+              console.error('Invalid validation function:', e);
+              return false;
+            }
           }
+          return false;
         default:
-          return true;
+          return false;
       }
     };
 
@@ -881,7 +919,7 @@ const ContactImport: React.FC = () => {
     // Apply main custom filters
     if (filterOptions.customFilters.length > 0) {
       const filterResults = filterOptions.customFilters.map((filter: CustomFilter) =>
-        filtered.map((contact: Contact) => applyCustomFilter(contact, filter))
+        filtered.map((contact: NormalizedContact) => applyCustomFilter(contact, filter))
       );
 
       filtered = filtered.filter((_, index) => {
@@ -1114,12 +1152,12 @@ const ContactImport: React.FC = () => {
 
   // Helper function for merging contacts
   const mergeContacts = (
-    newContact: Contact,
-    existingContact: Contact,
+    newContact: NormalizedContact,
+    existingContact: NormalizedContact,
     strategy: MergeStrategy,
     customRules: typeof customMergeRules
-  ): Contact => {
-    const merged: Contact = { ...newContact };
+  ): NormalizedContact => {
+    const merged: NormalizedContact = { ...newContact };
 
     // Apply custom merge rules if specified
     if (customRules.length > 0) {
@@ -1222,16 +1260,19 @@ const ContactImport: React.FC = () => {
     return merged;
   };
 
-  // Add cleanup on component unmount
+  // Update cleanupResources function
+  const cleanupResources = () => {
+    setContacts([]);
+    setSimilarityGroups([]);
+    setPreviewContacts([]);
+    setOperationHistory([]);
+    setHistoryIndex(-1);
+  };
+
+  // Update useEffect cleanup
   useEffect(() => {
     return () => {
-      cleanupResources({
-        setContacts,
-        setSimilarityGroups,
-        setPreviewContacts,
-        setOperationHistory,
-        setHistoryIndex
-      });
+      cleanupResources();
     };
   }, []);
 

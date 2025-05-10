@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check if 2FA is required
-  if (session.requiresTwoFactor && !pathname.startsWith('/auth/2fa')) {
+  if ('requiresTwoFactor' in session && session.requiresTwoFactor && !pathname.startsWith('/auth/2fa')) {
     const twoFactorUrl = new URL('/auth/2fa', request.url);
     twoFactorUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(twoFactorUrl);

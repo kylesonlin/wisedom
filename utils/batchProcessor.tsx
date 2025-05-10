@@ -1,6 +1,7 @@
 import { Contact } from '../types/contact';
 import { normalizeContacts } from './contactNormalization';
 import { groupSimilarContacts } from './mlDuplicateDetection';
+import { NormalizedContact } from './contactNormalization';
 
 export type ProcessingStage = 'idle' | 'parsing' | 'validating' | 'normalizing' | 'saving' | 'complete';
 
@@ -8,14 +9,14 @@ interface BatchProcessorOptions {
   batchSize?: number;
   similarityThreshold?: number;
   onProgress?: (progress: number, stage: ProcessingStage) => void;
-  onBatchProcessed?: (batch: Contact[], stage: ProcessingStage) => void;
-  onNormalizationComplete?: (normalizedContacts: Contact[]) => void;
+  onBatchProcessed?: (batch: NormalizedContact[], stage: ProcessingStage) => void;
+  onNormalizationComplete?: (normalizedContacts: NormalizedContact[]) => void;
   onError?: (error: Error) => void;
 }
 
 interface BatchProcessorResult {
-  contacts: Contact[];
-  similarityGroups: Contact[][];
+  contacts: NormalizedContact[];
+  similarityGroups: NormalizedContact[][];
   totalProcessed: number;
   processingTime: number;
   duplicatesFound: number;
@@ -26,14 +27,18 @@ interface BatchProcessorResult {
   };
 }
 
-const getFullName = (contact: Contact) => `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
+const getFullName = (contact: Contact | NormalizedContact) => {
+  const firstName = contact.firstName ?? '';
+  const lastName = contact.lastName ?? '';
+  return `${firstName} ${lastName}`.trim();
+};
 
 export class BatchProcessor {
   private batchSize: number;
   private similarityThreshold: number;
   private onProgress?: (progress: number, stage: ProcessingStage) => void;
-  private onBatchProcessed?: (batch: Contact[], stage: ProcessingStage) => void;
-  private onNormalizationComplete?: (normalizedContacts: Contact[]) => void;
+  private onBatchProcessed?: (batch: NormalizedContact[], stage: ProcessingStage) => void;
+  private onNormalizationComplete?: (normalizedContacts: NormalizedContact[]) => void;
   private onError?: (error: Error) => void;
 
   constructor(options: BatchProcessorOptions = {}) {
@@ -54,9 +59,9 @@ export class BatchProcessor {
     const threshold = options.similarityThreshold || this.similarityThreshold;
     
     const totalContacts = contacts.length;
-    const batches: Contact[][] = [];
-    const processedContacts: Contact[] = [];
-    const allSimilarityGroups: Contact[][] = [];
+    const batches: NormalizedContact[][] = [];
+    const processedContacts: NormalizedContact[] = [];
+    const allSimilarityGroups: NormalizedContact[][] = [];
     const normalizationStats = {
       emailsNormalized: 0,
       phonesNormalized: 0,
@@ -64,9 +69,28 @@ export class BatchProcessor {
     };
 
     try {
+      // Convert contacts to NormalizedContact[]
+      const normalizedContacts = contacts.map(contact => ({
+        ...contact,
+        firstName: contact.firstName?.trim(),
+        lastName: contact.lastName?.trim(),
+        email: contact.email?.toLowerCase().trim(),
+        phone: contact.phone?.trim(),
+        normalizedEmail: contact.email?.toLowerCase().trim() ?? '',
+        source: 'batchProcessor',
+        confidence: 1,
+        normalizationTimestamp: new Date(),
+        originalValues: {
+          email: contact.email,
+          phone: contact.phone,
+          firstName: contact.firstName,
+          lastName: contact.lastName
+        }
+      }));
+
       // Split contacts into batches
       for (let i = 0; i < totalContacts; i += batchSize) {
-        batches.push(contacts.slice(i, i + batchSize));
+        batches.push(normalizedContacts.slice(i, i + batchSize));
       }
 
       // Process each batch
@@ -129,19 +153,29 @@ export class BatchProcessor {
     }
   }
 
-  private async validateBatch(batch: Contact[]): Promise<Contact[]> {
+  private async validateBatch(batch: NormalizedContact[]): Promise<NormalizedContact[]> {
     return batch.map(contact => ({
       ...contact,
       firstName: contact.firstName?.trim(),
       lastName: contact.lastName?.trim(),
       email: contact.email?.toLowerCase().trim(),
-      phone: contact.phone?.trim()
+      phone: contact.phone?.trim(),
+      normalizedEmail: contact.email?.toLowerCase().trim() ?? '',
+      source: 'batchProcessor',
+      confidence: 1,
+      normalizationTimestamp: new Date(),
+      originalValues: {
+        email: contact.email,
+        phone: contact.phone,
+        firstName: contact.firstName,
+        lastName: contact.lastName
+      }
     }));
   }
 
-  private mergeBatchGroups(contacts: Contact[], groups: Contact[][]): Contact[] {
-    const mergedContacts: Contact[] = [];
-    const processed = new Set<Contact>();
+  private mergeBatchGroups(contacts: NormalizedContact[], groups: NormalizedContact[][]): NormalizedContact[] {
+    const mergedContacts: NormalizedContact[] = [];
+    const processed = new Set<NormalizedContact>();
 
     for (const group of groups) {
       if (group.length <= 1) {
@@ -165,12 +199,12 @@ export class BatchProcessor {
     return mergedContacts;
   }
 
-  private mergeContacts(contacts: Contact[]): Contact {
+  private mergeContacts(contacts: NormalizedContact[]): NormalizedContact {
     if (contacts.length === 0) {
       throw new Error('No contacts to merge');
     }
 
-    const merged: Contact = { ...contacts[0] };
+    const merged: NormalizedContact = { ...contacts[0] };
 
     for (let i = 1; i < contacts.length; i++) {
       const current = contacts[i];

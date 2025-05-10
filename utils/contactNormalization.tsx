@@ -204,7 +204,7 @@ export const normalizeContact = (contact: Contact): NormalizedContact => {
     normalizedEmail: normalizeEmail(contact.email ? contact.email : ''),
     normalizedPhone: contact.phone ? normalizePhone(contact.phone) : undefined,
     normalizedName,
-    source: contact.source || 'manual',
+    source: typeof (contact as any).source === 'string' ? (contact as any).source : 'manual',
     confidence: 1.0,
     normalizationTimestamp: new Date(),
     originalValues: {
