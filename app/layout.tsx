@@ -1,7 +1,5 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { ThemeProvider } from '@/components/ThemeProvider'
-import { SessionProvider } from 'next-auth/react'
 import Providers from '@/components/Providers'
 
 export const metadata: Metadata = {
@@ -19,14 +17,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
+          {children}
         </Providers>
       </body>
     </html>
