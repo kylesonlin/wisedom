@@ -15,30 +15,47 @@ async function generateCSRFToken(): Promise<string> {
 }
 
 export async function middleware(request: NextRequest) {
+  const { pathname, hostname } = request.nextUrl;
   const session = await getSession();
-  const { pathname } = request.nextUrl;
 
-  // Public paths that don't require authentication
-  const publicPaths = ['/auth/signin', '/auth/signup', '/auth/reset-password'];
-  if (publicPaths.includes(pathname)) {
-    if (session) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+  // Handle domain-based routing
+  if (hostname === 'wisedom.ai' || hostname === 'www.wisedom.ai') {
+    // Marketing site - redirect to marketing pages
+    if (pathname.startsWith('/app') || pathname.startsWith('/dashboard')) {
+      return NextResponse.redirect(new URL('/', request.url));
     }
     return NextResponse.next();
   }
 
-  // Check if user is authenticated
-  if (!session) {
-    const signInUrl = new URL('/auth/signin', request.url);
-    signInUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(signInUrl);
-  }
+  if (hostname === 'app.wisedom.ai') {
+    // App site - handle authentication and routing
+    const publicPaths = ['/auth/signin', '/auth/signup', '/auth/reset-password'];
+    
+    if (publicPaths.includes(pathname)) {
+      if (session) {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+      return NextResponse.next();
+    }
 
-  // Check if 2FA is required
-  if ('requiresTwoFactor' in session && session.requiresTwoFactor && !pathname.startsWith('/auth/2fa')) {
-    const twoFactorUrl = new URL('/auth/2fa', request.url);
-    twoFactorUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(twoFactorUrl);
+    // Check if user is authenticated
+    if (!session) {
+      const signInUrl = new URL('/auth/signin', request.url);
+      signInUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(signInUrl);
+    }
+
+    // Check if 2FA is required
+    if ('requiresTwoFactor' in session && session.requiresTwoFactor && !pathname.startsWith('/auth/2fa')) {
+      const twoFactorUrl = new URL('/auth/2fa', request.url);
+      twoFactorUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(twoFactorUrl);
+    }
+
+    // Redirect marketing pages to main site
+    if (pathname === '/' || pathname === '/features' || pathname === '/pricing') {
+      return NextResponse.redirect(new URL(pathname, 'https://wisedom.ai'));
+    }
   }
 
   // Allow access to the requested path
