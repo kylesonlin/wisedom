@@ -19,4 +19,7 @@ const supabaseClient = createClient(
 );
 
 export { supabaseClient as supabase };
-export const getSupabaseClient = () => supabaseClient; 
+export const getSupabaseClient = () => supabaseClient;
+
+export { getProfile, updateProfile, uploadAvatar } from './supabaseHelpers';
+export type { Profile } from './supabaseHelpers'; 
