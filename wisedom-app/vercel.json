@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "next build",
+  "buildCommand": "cd wisedom-app && next build",
   "installCommand": "npm install",
   "framework": "nextjs",
   "regions": ["sfo1"],
