@@ -1,0 +1,12 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+const content = readFileSync(join(process.cwd(), 'pages/docs/index.mdx'), 'utf-8');
+
+export default function DocsPage() {
+  return (
+    <div className="prose dark:prose-invert max-w-none">
+      {content}
+    </div>
+  );
+} 

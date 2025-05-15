@@ -1,10 +1,10 @@
 import { ReactNode } from 'react';
 
-interface LayoutProps {
+interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-export function Layout({ children }: LayoutProps) {
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow">

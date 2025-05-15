@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { TextEncoder, TextDecoder } from 'util';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterEach } from '@jest/globals';
 import { expect } from '@jest/globals';
 import React from 'react';
 

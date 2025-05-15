@@ -29,7 +29,13 @@ export async function middleware(request: NextRequest) {
 
   if (hostname === 'app.wisedom.ai') {
     // App site - handle authentication and routing
-    const publicPaths = ['/auth/signin', '/auth/signup', '/auth/reset-password'];
+    const publicPaths = [
+      '/auth/signin',
+      '/auth/signup',
+      '/auth/forgot-password',
+      '/auth/reset-password',
+      '/auth/verify-email'
+    ];
     
     if (publicPaths.includes(pathname)) {
       if (session) {
@@ -72,6 +78,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|public|.*\\.(?:jpg|jpeg|gif|png|svg|ico|webp|js|css)).*)',
   ],
 }; 

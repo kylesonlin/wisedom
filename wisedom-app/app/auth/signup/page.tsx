@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
 import React, { useState } from 'react';
-import Head from 'next/head';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../contexts/AuthContext';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Card } from '../../components/ui/Card';
-import { validateForm } from '../../utils/formValidation';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Card } from '@/components/ui/Card';
+import { validateForm } from '@/utils/formValidation';
 
-export default function SignUp() {
+export default function SignUpPage() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signup } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
@@ -30,10 +30,11 @@ export default function SignUp() {
       }
 
       const validationResult = validateForm(
-        { email, password },
+        { email, password, name },
         {
           email: { required: true },
           password: { required: true, minLength: 6 },
+          name: { required: true },
         }
       );
 
@@ -42,7 +43,7 @@ export default function SignUp() {
         return;
       }
 
-      await signUp(email, password);
+      await signup(email, password, name);
       router.push('/auth/verify-email');
     } catch (err: any) {
       setError(err.message);
@@ -57,26 +58,33 @@ export default function SignUp() {
         <h1 className="mb-6 text-center text-2xl font-bold">Sign Up</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            aria-aria-aria-label="Email"
+            aria-label="Name"
+            type="text"
+            placeholder="Enter your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Input
+            aria-label="Email"
             type="email"
             placeholder="Enter your email"
             value={email}
-            onValueChange={(value: string) => setEmail(value)}
-            data-data-error={error}
+            onChange={(e) => setEmail(e.target.value)}
+            data-error={error}
           />
           <Input
-            aria-aria-aria-label="Password"
+            aria-label="Password"
             type="password"
             placeholder="Enter your password"
             value={password}
-            onValueChange={(value: string) => setPassword(value)}
+            onChange={(e) => setPassword(e.target.value)}
           />
           <Input
-            aria-aria-aria-label="Confirm Password"
+            aria-label="Confirm Password"
             type="password"
             placeholder="Confirm your password"
             value={confirmPassword}
-            onValueChange={(value: string) => setConfirmPassword(value)}
+            onChange={(e) => setConfirmPassword(e.target.value)}
           />
           {error && (
             <p className="text-sm text-destructive">{error}</p>

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: 'Manage your account settings and preferences.',
 };
 
-export default function Layout({
+export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;

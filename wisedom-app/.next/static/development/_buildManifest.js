@@ -1,1 +1,0 @@
-self.__BUILD_MANIFEST = {__rewrites:{afterFiles:[],beforeFiles:[{has:[{type:"host",value:"app.wisedom.ai"}],source:"\u002F:path*",destination:"\u002Fapp\u002F:path*"}],fallback:[]},sortedPages:["\u002F_app"]};self.__BUILD_MANIFEST_CB && self.__BUILD_MANIFEST_CB()

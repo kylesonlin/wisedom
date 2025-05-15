@@ -1,11 +1,11 @@
 import { ReactNode } from 'react';
 
-interface PageProps {
+interface PageContainerProps {
   children: ReactNode;
   title?: string;
 }
 
-export function Page({ children, title }: PageProps) {
+export default function PageContainer({ children, title }: PageContainerProps) {
   return (
     <div className="space-y-6">
       {title && (
