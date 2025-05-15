@@ -22,8 +22,8 @@ A modern, type-safe dashboard widget system built with Next.js, React, and TypeS
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/dashboard-widgets.git
-cd dashboard-widgets
+git clone https://github.com/kylesonlin/wisedom-app.git
+cd wisedom-app
 ```
 
 2. Install dependencies:
