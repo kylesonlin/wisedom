@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Card } from '@/components/ui';
-import { getProfile, updateProfile, uploadAvatar, Profile } from '@/utils/supabase';
+import { getProfile, updateProfile, uploadAvatar, Profile, supabase } from '@/utils/supabase';
 import { validateForm } from '@/utils/formValidation';
 
 export default function ProfilePage() {
@@ -28,7 +28,7 @@ export default function ProfilePage() {
 
   const loadProfile = async () => {
     try {
-      const data = await getProfile(user!.id);
+      const data = await getProfile(supabase, user!.id);
       setProfile(data);
       setFormData({
         username: data.username,
@@ -58,7 +58,7 @@ export default function ProfilePage() {
         return;
       }
 
-      await updateProfile(user!.id, formData);
+      await updateProfile(supabase, user!.id, formData);
       setSuccess(true);
       await loadProfile();
     } catch (err: any) {
@@ -74,8 +74,8 @@ export default function ProfilePage() {
 
     try {
       setSaving(true);
-      const avatarUrl = await uploadAvatar(user!.id, file);
-      await updateProfile(user!.id, { avatarUrl });
+      const avatarUrl = await uploadAvatar(supabase, user!.id, file);
+      await updateProfile(supabase, user!.id, { avatarUrl });
       await loadProfile();
     } catch (err: any) {
       setError(err.message);
@@ -132,13 +132,13 @@ export default function ProfilePage() {
           <Input
             aria-label="Username"
             value={formData.username}
-            onValueChange={(value: string) => setFormData({ ...formData, username: value })}
+            onChange={e => setFormData({ ...formData, username: e.target.value })}
             data-error={error}
           />
           <Input
             aria-label="Full Name"
             value={formData.fullName}
-            onValueChange={(value: string) => setFormData({ ...formData, fullName: value })}
+            onChange={e => setFormData({ ...formData, fullName: e.target.value })}
           />
           
           {error && (
