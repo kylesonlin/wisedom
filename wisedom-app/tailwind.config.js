@@ -79,4 +79,10 @@ module.exports = {
       pattern: /^(bg|text|border)-(background|foreground|primary|secondary|muted|accent|popover|card|destructive)(-foreground)?$/,
     },
   ],
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
+  experimental: {
+    optimizeUniversalDefaults: true,
+  },
 };
