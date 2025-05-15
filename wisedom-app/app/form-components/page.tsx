@@ -288,7 +288,9 @@ export default function FormComponentsExample() {
                       id={option.value}
                       value={option.value}
                       checked={formData.notifications.includes(option.value)}
-                      onChange={handleNotificationChange}
+                      onCheckedChange={(checked) => handleNotificationChange({
+                        target: { value: option.value, checked: !!checked }
+                      } as any)}
                     />
                     <label htmlFor={option.value} className="text-sm">
                       {option.label}
@@ -316,7 +318,9 @@ export default function FormComponentsExample() {
                 <Checkbox
                   id="terms"
                   checked={formData.terms}
-                  onChange={handleInputChange}
+                  onCheckedChange={(checked) => handleInputChange({
+                    target: { name: 'terms', checked: !!checked, type: 'checkbox' }
+                  } as any)}
                   name="terms"
                   data-error={errors.terms}
                 />
@@ -326,7 +330,7 @@ export default function FormComponentsExample() {
               </div>
 
               <FileUpload
-                onFileChange={handleFileChange}
+                onFilesChange={(files) => handleFileChange(files[0] || null)}
                 accept=".pdf,.doc,.docx"
                 maxSize={5 * 1024 * 1024} // 5MB
               />
