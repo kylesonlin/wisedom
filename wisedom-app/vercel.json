@@ -55,5 +55,6 @@
   },
   "env": {
     "NEXT_PUBLIC_APP_URL": "https://app.wisedom.ai"
-  }
+  },
+  "outputDirectory": ".next"
 } 
