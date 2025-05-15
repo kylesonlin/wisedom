@@ -1,0 +1,1 @@
+self.__BUILD_MANIFEST = (function(a,b){return {__rewrites:{afterFiles:[],beforeFiles:[{has:[{type:a,value:"wisedom.ai"}],source:b,destination:"\u002Fmarketing\u002F:path*"},{has:[{type:a,value:"app.wisedom.ai"}],source:b,destination:"\u002Fapp\u002F:path*"}],fallback:[]},sortedPages:["\u002F_app"]}}("host","\u002F:path*"));self.__BUILD_MANIFEST_CB && self.__BUILD_MANIFEST_CB()

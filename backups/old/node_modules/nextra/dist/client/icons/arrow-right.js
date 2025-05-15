@@ -1,0 +1,24 @@
+import { jsx } from "react/jsx-runtime";
+import { c as _c } from "react-compiler-runtime";
+const SvgArrowRight = (props) => {
+  const $ = _c(3);
+  let t0;
+  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+    t0 = /* @__PURE__ */ jsx("path", { d: "M9 5l7 7-7 7", strokeLinecap: "round", strokeLinejoin: "round" });
+    $[0] = t0;
+  } else {
+    t0 = $[0];
+  }
+  let t1;
+  if ($[1] !== props) {
+    t1 = /* @__PURE__ */ jsx("svg", { viewBox: "0 0 24 24", stroke: "currentColor", fill: "none", strokeWidth: 2, ...props, children: t0 });
+    $[1] = props;
+    $[2] = t1;
+  } else {
+    t1 = $[2];
+  }
+  return t1;
+};
+export {
+  SvgArrowRight as ReactComponent
+};
