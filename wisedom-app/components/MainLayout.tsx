@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter, usePathname } from 'next/navigation';
 import { Box, CssBaseline, AppBar, Toolbar, Typography, List, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -68,6 +68,7 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -134,7 +135,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <ListItemButton
               key={item.text}
               onClick={() => handleNavigation(item.href)}
-              selected={router.pathname === item.href}
+              selected={pathname === item.href}
               sx={{
                 '&.Mui-selected': {
                   backgroundColor: 'action.selected',

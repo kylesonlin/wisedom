@@ -1,5 +1,6 @@
+"use client";
 import React from 'react';
-import { useRouter } from 'next/router';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Box,
   List,
@@ -26,6 +27,7 @@ interface SidePanelProps {
 
 const SidePanel: React.FC<SidePanelProps> = ({ menuItems }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = getSupabaseClient();
 
   const handleLogout = async () => {
@@ -49,7 +51,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ menuItems }) => {
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
-              selected={router.pathname === item.href}
+              selected={pathname === item.href}
               onClick={() => router.push(item.href)}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
