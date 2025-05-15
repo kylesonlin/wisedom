@@ -75,22 +75,22 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   // Domain configuration
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: '/:path*',
-          has: [
-            {
-              type: 'host',
-              value: 'app.wisedom.ai',
-            },
-          ],
-          destination: '/app/:path*',
-        },
-      ],
-    };
-  },
+  // async rewrites() {
+  //   return {
+  //     beforeFiles: [
+  //       {
+  //         source: '/:path*',
+  //         has: [
+  //           {
+  //             type: 'host',
+  //             value: 'app.wisedom.ai',
+  //           },
+  //         ],
+  //         destination: '/app/:path*',
+  //       },
+  //     ],
+  //   };
+  // },
 };
 
 module.exports = nextConfig; 
