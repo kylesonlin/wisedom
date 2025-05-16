@@ -20,8 +20,7 @@
   "node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js -> ws": {
     "id": 55223,
     "files": [
-      "static/chunks/5223.dd6428e02df6946a.js",
-      "static/chunks/7026.9f55c324473bcfa6.js"
+      "static/chunks/5223.dd6428e02df6946a.js"
     ]
   },
   "node_modules/@supabase/storage-js/dist/module/lib/helpers.js -> @supabase/node-fetch": {
