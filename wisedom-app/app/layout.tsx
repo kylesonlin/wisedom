@@ -1,9 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import './test.css'
 import Providers from '@/components/Providers'
-import ClientCssLoader from './ClientCssLoader'
-import DummyTailwind from './DummyTailwind'
 
 export const metadata: Metadata = {
   title: 'RelationshipOS App',
@@ -31,10 +28,6 @@ export const metadata: Metadata = {
   },
 }
 
-if (typeof window === 'undefined') {
-  require('./globals.css')
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -46,8 +39,6 @@ export default function RootLayout({
         <link rel="icon" href="/logo.png" type="image/png" />
       </head>
       <body>
-        <ClientCssLoader />
-        <DummyTailwind />
         <Providers>
           {children}
         </Providers>
